@@ -180,8 +180,8 @@ export default function App() {
                   <div className="flex flex-wrap gap-3">
                     {subCategories.map((sub) => (
                       <button 
-                        key={sub.id} 
-                        onClick={() => setActiveSubCategory(sub)}
+                        key={sub.id || sub.name} 
+                        onClick={() => setActiveSubCategory(sub.name)}
                         className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeSubCategory?.id === sub.id ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-indigo-300"}`}
                       >
                         {sub.name}
@@ -195,8 +195,12 @@ export default function App() {
               <div>
                 <div className="flex items-center gap-3 mb-8">
                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {activeMainCategory === "All" ? "Popular Services" : (activeSubCategory ? activeSubCategory.name : activeMainCategory)}
-                  </h3>
+                    {activeMainCategory === "All" 
+                      ? "Popular Services" 
+                      : (activeSubCategory 
+                        ? activeSubCategory.name 
+                        : (activeMainCategory.name || activeMainCategory))} {/* Safely handles both objects and strings */}
+                    </h3>
                   {isLoadingData && <Loader2 className="animate-spin text-indigo-600" size={20} />}
                 </div>
 
