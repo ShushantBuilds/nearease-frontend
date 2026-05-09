@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 // Added 'Eye' and 'EyeOff' icons to the import
 import { X, Mail, Lock, Loader2, CheckCircle2, Eye, EyeOff } from "lucide-react";
 
-const BACKEND_URL = "http://192.168.1.15:8080"; // Keep your backend IP
+// const BACKEND_URL = "http://192.168.1.15:8080"; 
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 export default function AuthModal({ isOpen, view, onClose, onViewChange, onLoginSuccess }) {
   const [isLoading, setIsLoading] = useState(false);

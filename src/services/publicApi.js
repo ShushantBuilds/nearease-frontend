@@ -1,4 +1,6 @@
-const BASE_URL = "http://192.168.1.15:8080/api/public";
+// const BASE_URL = "http://192.168.1.15:8080/api/public";
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const BASE_URL = `${BACKEND_URL}/api/public`;
 
 export const PublicAPI = {
   // 1. Get main categories (e.g., Semi-Luxurious, Luxurious)
