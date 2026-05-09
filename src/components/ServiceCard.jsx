@@ -21,7 +21,7 @@ export default function ServiceCard({ item, onClick }) {
           />
         ))}
         <span className="absolute top-3 left-3 z-20 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm text-indigo-600 dark:text-indigo-400 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide shadow-sm">
-          {item.category}
+          {item.category?.name || item.category || "Service"}
         </span>
       </div>
 
