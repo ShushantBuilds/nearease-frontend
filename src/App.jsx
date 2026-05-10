@@ -164,15 +164,26 @@ export default function App() {
                   >
                     All Services
                   </button>
-                  {mainCategories.map((cat) => (
-                    <button 
-                      key={cat} 
-                      onClick={() => setActiveMainCategory(cat)}
-                      className={`px-6 py-3 rounded-full font-bold transition-all whitespace-nowrap cursor-pointer ${activeMainCategory === cat ? "bg-indigo-600 text-white shadow-md" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200"}`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+                  
+                  {/* --- THIS IS THE CRITICAL FIX AREA --- */}
+                  {mainCategories.map((cat) => {
+                    // Safety check: Extract the name whether it's an object or a string
+                    const catName = typeof cat === 'string' ? cat : cat?.name;
+                    // Safety check: Extract a unique key
+                    const catKey = typeof cat === 'string' ? cat : (cat?.id || cat?.name);
+
+                    if (!catName) return null; // Skip if somehow empty
+
+                    return (
+                      <button 
+                        key={catKey} 
+                        onClick={() => setActiveMainCategory(catName)} // Only save the string!
+                        className={`px-6 py-3 rounded-full font-bold transition-all whitespace-nowrap cursor-pointer ${activeMainCategory === catName ? "bg-indigo-600 text-white shadow-md" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200"}`}
+                      >
+                        {catName} {/* Only print the string! */}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
