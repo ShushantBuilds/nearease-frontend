@@ -48,6 +48,7 @@ export default function App() {
   useEffect(() => {
     const loadCategories = async () => {
       const data = await PublicAPI.getCategories();
+      console.log("🚨 CATEGORY DATA 🚨:", data);
       setMainCategories(data);
     };
     loadCategories();
@@ -63,6 +64,7 @@ export default function App() {
       }
       setIsLoadingData(true);
       const data = await PublicAPI.getTypesByCategory(activeMainCategory);
+      console.log("🚨 CATEGORY DATA 🚨:", data);
       setSubCategories(data);
       setActiveSubCategory(null); 
       setIsLoadingData(false);
@@ -76,6 +78,7 @@ export default function App() {
       if (!activeSubCategory) return;
       setIsLoadingData(true);
       const data = await PublicAPI.getOfferingsByType(activeSubCategory.id);
+      console.log("🚨 RAW BACKEND DATA 🚨:", data);
       setListings(data);
       setIsLoadingData(false);
     };
