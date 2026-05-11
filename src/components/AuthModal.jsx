@@ -9,15 +9,15 @@ export default function AuthModal({ isOpen, view, onClose, onViewChange, onLogin
   const [isLoading, setIsLoading] = useState(false);
 
   // --- Login States ---
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
+  const [email, setLoginEmail] = useState("");
+  const [password, setLoginPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false); // Toggle visibility
 
   // --- Signup States ---
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
-  const [phone, setPhone] = useState("");
+  const [PhoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   
@@ -44,7 +44,7 @@ export default function AuthModal({ isOpen, view, onClose, onViewChange, onLogin
       setFirstName("");
       setLastName("");
       setUsername("");
-      setPhone("");
+      setPhoneNumber("");
       setPassword("");
       setConfirmPassword("");
       setEmail("");
@@ -105,7 +105,7 @@ export default function AuthModal({ isOpen, view, onClose, onViewChange, onLogin
     
     setIsLoading(true);
     try {
-      const payload = { firstName, lastName, username, phone, email, password };
+      const payload = { firstName, lastName, username, PhoneNumber, email, password };
       const response = await fetch(`${BACKEND_URL}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -214,7 +214,7 @@ export default function AuthModal({ isOpen, view, onClose, onViewChange, onLogin
               </div>
               <div>
                 <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 ml-1 font-medium">Phone Number</label>
-                <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="+91 98765 43210" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 px-4 py-2.5 rounded-xl outline-none transition" />
+                <input value={PhoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} type="tel" placeholder="+91 98765 43210" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 px-4 py-2.5 rounded-xl outline-none transition" />
               </div>
             </div>
 
@@ -324,7 +324,7 @@ export default function AuthModal({ isOpen, view, onClose, onViewChange, onLogin
                 <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 ml-1 font-medium">Email Address</label>
                 <div className="relative">
                   <Mail size={18} className="absolute left-4 top-3.5 text-gray-400" />
-                  <input value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} type="email" placeholder="Enter your email" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 pl-11 pr-4 py-3 rounded-xl outline-none transition" />
+                  <input value={email} onChange={(e) => setLoginEmail(e.target.value)} type="email" placeholder="Enter your email" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 pl-11 pr-4 py-3 rounded-xl outline-none transition" />
                 </div>
               </div>
 
@@ -333,7 +333,7 @@ export default function AuthModal({ isOpen, view, onClose, onViewChange, onLogin
                 <div className="relative">
                   <Lock size={18} className="absolute left-4 top-3.5 text-gray-400" />
                   <input 
-                    value={loginPassword} 
+                    value={password} 
                     onChange={(e) => setLoginPassword(e.target.value)} 
                     type={showLoginPassword ? "text" : "password"} 
                     placeholder="••••••••" 
