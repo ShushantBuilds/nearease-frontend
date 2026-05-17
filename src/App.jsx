@@ -17,7 +17,7 @@ import MyReviews from "./components/MyReviews";
 
 // API Services
 import { PublicAPI } from "./services/publicApi";
-import { UserAPI } from "./services/userApi"; // <--- ADDED: Needed for global search
+import { UserAPI } from "./services/userApi";
 
 // Local UI Assets
 import { heroImages } from "./data/mockData"; 
@@ -47,6 +47,20 @@ export default function App() {
 
   const mainContentRef = useRef(null);
 
+  // ==========================================
+  // --- NEW: PERSISTENT LOGIN LOGIC ---
+  // ==========================================
+  useEffect(() => {
+    const savedUser = localStorage.getItem("nearEaseUser");
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (error) {
+        console.error("Failed to parse saved user data");
+      }
+    }
+  }, []);
+
   // 1. Initial Load: Fetch main categories from backend
   useEffect(() => {
     const loadCategories = async () => {
@@ -73,35 +87,30 @@ export default function App() {
     fetchSubCats();
   }, [activeMainCategory]);
 
-  // 3. THE NEW MASTER FETCHER: Get Listings ONLY when a Sub-Category is clicked
+  // 3. THE MASTER FETCHER: Get Listings ONLY when a Sub-Category is clicked
   useEffect(() => {
     const fetchListings = async () => {
-      // If no subcategory is selected (or it doesn't have an ID), stop here.
-      // Your backend requires a typeId to fetch offerings!
       if (!activeSubCategory || !activeSubCategory.id) {
         return; 
       }
 
       setIsLoadingData(true);
       try {
-        // Call the specific PublicAPI endpoint using the ID
         const data = await PublicAPI.getOfferingsByType(activeSubCategory.id);
         setListings(Array.isArray(data) ? data : []);
 
       } catch (error) {
         console.error("Failed to fetch listings:", error);
-        setListings([]); // Fallback to empty array on error
+        setListings([]); 
       } finally {
         setIsLoadingData(false);
       }
     };
 
-    // Only run the fetch if we are on the home page
     if (activePage === "home") {
       fetchListings();
     }
-  }, [activeSubCategory, activePage]); // Removed activeMainCategory from dependencies
-
+  }, [activeSubCategory, activePage]); 
 
   const scrollToContent = () => {
     if (mainContentRef.current) {
@@ -112,14 +121,20 @@ export default function App() {
     }
   };
 
-  // Local text/location filtering on top of the fetched database results
   const filteredListings = listings.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
     const matchesLoc = item.location ? item.location.toLowerCase().includes(location.toLowerCase()) : true;
     return matchesSearch && matchesLoc;
   });
 
-  const handleLogout = () => { setUser(null); setIsDropdownOpen(false); setActivePage("home"); };
+  // --- UPDATED LOGOUT LOGIC ---
+  const handleLogout = () => { 
+    setUser(null); 
+    localStorage.removeItem("nearEaseUser"); // Wipes the memory on logout
+    setIsDropdownOpen(false); 
+    setActivePage("home"); 
+  };
+  
   const toggleTheme = () => { setIsDarkMode(!isDarkMode); setIsDropdownOpen(false); };
 
   useEffect(() => {
@@ -204,22 +219,22 @@ export default function App() {
               </div>
 
               {/* Dynamic Subcategory Filters */}
-{activeMainCategory !== "All" && subCategories.length > 0 && (
-  <div className="mb-12 animate-in slide-in-from-top-4 duration-300">
-    <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Filter by Type</h4>
-    <div className="flex flex-wrap gap-3">
-      {subCategories.map((sub) => (
-        <button 
-          key={sub.id || sub.name} 
-          onClick={() => setActiveSubCategory(sub)}
-          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeSubCategory?.id === sub.id ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-indigo-300"}`}
-        >
-          {sub.name}
-        </button>
-      ))}
-    </div>
-  </div>
-)}
+              {activeMainCategory !== "All" && subCategories.length > 0 && (
+                <div className="mb-12 animate-in slide-in-from-top-4 duration-300">
+                  <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Filter by Type</h4>
+                  <div className="flex flex-wrap gap-3">
+                    {subCategories.map((sub) => (
+                      <button 
+                        key={sub.id || sub.name} 
+                        onClick={() => setActiveSubCategory(sub)}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeSubCategory?.id === sub.id ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-indigo-300"}`}
+                      >
+                        {sub.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Listings Grid */}
               <div>
@@ -272,7 +287,11 @@ export default function App() {
           view={authModalView} 
           onClose={() => setAuthModalView(null)} 
           onViewChange={setAuthModalView} 
-          onLoginSuccess={setUser} 
+          // --- UPDATED: Save user to local storage on successful login ---
+          onLoginSuccess={(userData) => {
+            setUser(userData);
+            localStorage.setItem("nearEaseUser", JSON.stringify(userData));
+          }} 
         />
         
         <PreviewModal 
