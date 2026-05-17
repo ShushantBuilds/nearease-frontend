@@ -1,16 +1,15 @@
-// const BASE_URL = "http://192.168.1.15:8080/api/public";
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
-const BASE_URL = `${BACKEND_URL}/api/public`;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 export const PublicAPI = {
   // 1. Get main categories (e.g., Semi-Luxurious, Luxurious)
   getCategories: async () => {
     try {
-      const response = await fetch(`${BASE_URL}/categories/`);
+      // Notice the added /api/public and the trailing slash!
+      const response = await fetch(`${BASE_URL}/api/public/categories/`);
       if (!response.ok) throw new Error("Failed to fetch categories");
       return await response.json(); 
     } catch (error) {
-      console.error(error);
+      console.error("Error in getCategories:", error);
       return [];
     }
   },
@@ -18,11 +17,11 @@ export const PublicAPI = {
   // 2. Get types under a specific category
   getTypesByCategory: async (categoryName) => {
     try {
-      const response = await fetch(`${BASE_URL}/categories/${categoryName}/types`);
+      const response = await fetch(`${BASE_URL}/api/public/categories/${categoryName}/types`);
       if (!response.ok) throw new Error("Failed to fetch types");
       return await response.json(); 
     } catch (error) {
-      console.error(error);
+      console.error("Error in getTypesByCategory:", error);
       return [];
     }
   },
@@ -30,11 +29,11 @@ export const PublicAPI = {
   // 3. Get provider offerings for a specific type ID
   getOfferingsByType: async (typeId) => {
     try {
-      const response = await fetch(`${BASE_URL}/type/${typeId}/offering`);
+      const response = await fetch(`${BASE_URL}/api/public/type/${typeId}/offering`);
       if (!response.ok) throw new Error("Failed to fetch offerings");
       return await response.json();
     } catch (error) {
-      console.error(error);
+      console.error("Error in getOfferingsByType:", error);
       return [];
     }
   },
@@ -42,12 +41,12 @@ export const PublicAPI = {
   // 4. Get a specific provider's portfolio (images, etc.)
   getProviderPortfolio: async (providerId) => {
     try {
-      const response = await fetch(`${BASE_URL}/providers/${providerId}/portfolio`);
+      const response = await fetch(`${BASE_URL}/api/public/providers/${providerId}/portfolio`);
       if (!response.ok) throw new Error("Failed to fetch portfolio");
       return await response.json();
     } catch (error) {
-      console.error(error);
-      return null;
+      console.error("Error in getProviderPortfolio:", error);
+      return [];
     }
   }
 };

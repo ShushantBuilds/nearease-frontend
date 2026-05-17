@@ -47,10 +47,6 @@ export default function App() {
 
   const mainContentRef = useRef(null);
 
-  // ==========================================
-  // FETCHING LOGIC (TRAP 3 FIXED)
-  // ==========================================
-
   // 1. Initial Load: Fetch main categories from backend
   useEffect(() => {
     const loadCategories = async () => {
@@ -64,6 +60,7 @@ export default function App() {
   useEffect(() => {
     const fetchSubCats = async () => {
       setActiveSubCategory(null); // Reset subcategory when main category changes
+      setListings([]); // CRITICAL: Clear listings because we can't search by Main Category alone
 
       if (activeMainCategory === "All") {
         setSubCategories([]);
@@ -76,25 +73,19 @@ export default function App() {
     fetchSubCats();
   }, [activeMainCategory]);
 
-  // 3. THE MASTER FETCHER: Get Listings whenever ANY category changes
+  // 3. THE NEW MASTER FETCHER: Get Listings ONLY when a Sub-Category is clicked
   useEffect(() => {
     const fetchListings = async () => {
+      // If no subcategory is selected (or it doesn't have an ID), stop here.
+      // Your backend requires a typeId to fetch offerings!
+      if (!activeSubCategory || !activeSubCategory.id) {
+        return; 
+      }
+
       setIsLoadingData(true);
       try {
-        let searchParams = {};
-
-        // If they selected a main category, add it to the search
-        if (activeMainCategory !== "All") {
-          searchParams.mainCategory = activeMainCategory;
-        }
-
-        // If they selected a specific subcategory, add it to the search
-        if (activeSubCategory) {
-          searchParams.subCategory = activeSubCategory; 
-        }
-
-        // Call the global search API to fetch the actual services
-        const data = await UserAPI.globalSearch(searchParams);
+        // Call the specific PublicAPI endpoint using the ID
+        const data = await PublicAPI.getOfferingsByType(activeSubCategory.id);
         setListings(Array.isArray(data) ? data : []);
 
       } catch (error) {
@@ -105,11 +96,11 @@ export default function App() {
       }
     };
 
-    // Only run the fetch if we are on the home page to save network calls
+    // Only run the fetch if we are on the home page
     if (activePage === "home") {
       fetchListings();
     }
-  }, [activeMainCategory, activeSubCategory, activePage]);
+  }, [activeSubCategory, activePage]); // Removed activeMainCategory from dependencies
 
 
   const scrollToContent = () => {
@@ -213,23 +204,22 @@ export default function App() {
               </div>
 
               {/* Dynamic Subcategory Filters */}
-              {activeMainCategory !== "All" && subCategories.length > 0 && (
-                <div className="mb-12 animate-in slide-in-from-top-4 duration-300">
-                  <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Filter by Type</h4>
-                  <div className="flex flex-wrap gap-3">
-                    {subCategories.map((sub) => (
-                      <button 
-                        key={sub.id || sub.name} 
-                        onClick={() => setActiveSubCategory(sub.name)}
-                        // Fixed the string matching bug here:
-                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeSubCategory === sub.name ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-indigo-300"}`}
-                      >
-                        {sub.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+{activeMainCategory !== "All" && subCategories.length > 0 && (
+  <div className="mb-12 animate-in slide-in-from-top-4 duration-300">
+    <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Filter by Type</h4>
+    <div className="flex flex-wrap gap-3">
+      {subCategories.map((sub) => (
+        <button 
+          key={sub.id || sub.name} 
+          onClick={() => setActiveSubCategory(sub)}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeSubCategory?.id === sub.id ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-indigo-300"}`}
+        >
+          {sub.name}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
 
               {/* Listings Grid */}
               <div>
