@@ -11,15 +11,18 @@ export default function ProfileSettings({ user, setUser }) {
   });
   
   const [passwords, setPasswords] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  
+  // Email & OTP States
   const [newEmail, setNewEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [showOtpInput, setShowOtpInput] = useState(false);
   
   // Loading states
-  const [loadingSection, setLoadingSection] = useState(null); // 'image', 'details', 'email', 'password'
+  const [loadingSection, setLoadingSection] = useState(null); // 'image', 'details', 'email', 'verifyEmail', 'password'
   
   // Success messages
   const [messages, setMessages] = useState({});
 
-  // Helper to show temporary success messages
   const showMessage = (section, text, isError = false) => {
     setMessages({ ...messages, [section]: { text, isError } });
     setTimeout(() => setMessages((prev) => ({ ...prev, [section]: null })), 4000);
@@ -33,17 +36,16 @@ export default function ProfileSettings({ user, setUser }) {
     setLoadingSection("image");
     try {
       const formData = new FormData();
-      formData.append("file", file); // Adjust "file" to match your Spring Boot backend
+      formData.append("file", file); 
 
       const response = await UserAPI.updateProfileImage(formData);
       
-      // 1. Create the new user object (adjust based on what your backend returns)
-      const updatedUser = { ...user, profileImage: response.imageUrl || response.url || response };
+      // Extract URL depending on how your backend sends the raw string or JSON object
+      const newImageUrl = typeof response === 'string' ? response : (response.imageUrl || response.url || response.message);
       
-      // 2. Update React State
+      const updatedUser = { ...user, profileImage: newImageUrl };
+      
       setUser(updatedUser);
-      
-      // 3. Save to hard drive so it survives a refresh
       localStorage.setItem("nearEaseUser", JSON.stringify(updatedUser)); 
 
       showMessage("image", "Profile picture updated!");
@@ -60,13 +62,8 @@ export default function ProfileSettings({ user, setUser }) {
     try {
       await UserAPI.updateDetails(details);
       
-      // 1. Create the new user object
       const updatedUser = { ...user, ...details };
-      
-      // 2. Update React State
       setUser(updatedUser);
-      
-      // 3. Save to hard drive so it survives a refresh
       localStorage.setItem("nearEaseUser", JSON.stringify(updatedUser));
 
       showMessage("details", "Profile details updated!");
@@ -77,16 +74,41 @@ export default function ProfileSettings({ user, setUser }) {
     }
   };
 
+  // STEP 1: Request the OTP
   const handleEmailRequest = async (e) => {
     e.preventDefault();
     setLoadingSection("email");
     try {
-      // FIXED: Must match the OtpRequestDto 'email' property exactly
       await UserAPI.requestEmailUpdate({ email: newEmail });
       showMessage("email", "Verification OTP sent to your new email!");
-      setNewEmail("");
+      setShowOtpInput(true); // Reveal the OTP input field
     } catch (error) {
-      showMessage("email", "Failed to request email update.", true);
+      showMessage("email", error.message || "Failed to request email update.", true);
+    } finally {
+      setLoadingSection(null);
+    }
+  };
+
+  // STEP 2: Verify the OTP and save new email
+  const handleVerifyEmail = async (e) => {
+    e.preventDefault();
+    setLoadingSection("verifyEmail");
+    try {
+      const response = await UserAPI.verifyEmailUpdate({ email: newEmail, otp: otp });
+      
+      // Backend ApiResponse returns the new JWT token in the message or token field
+      const newToken = response.message || response.token;
+      
+      const updatedUser = { ...user, email: newEmail, token: newToken };
+      setUser(updatedUser);
+      localStorage.setItem("nearEaseUser", JSON.stringify(updatedUser));
+
+      showMessage("email", "Email successfully updated!");
+      setShowOtpInput(false);
+      setNewEmail("");
+      setOtp("");
+    } catch (error) {
+      showMessage("email", error.message || "Invalid OTP. Please try again.", true);
     } finally {
       setLoadingSection(null);
     }
@@ -100,7 +122,6 @@ export default function ProfileSettings({ user, setUser }) {
 
     setLoadingSection("password");
     try {
-      // FIXED: Matches Java's PasswordUpdateDto properties perfectly
       await UserAPI.changePassword({
         oldPassword: passwords.currentPassword,
         newPassword: passwords.newPassword,
@@ -127,8 +148,8 @@ export default function ProfileSettings({ user, setUser }) {
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-6">
           <div className="relative">
             <div className="w-24 h-24 rounded-full bg-indigo-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden border-4 border-white dark:border-gray-800 shadow-md">
-              {user?.profileImage ? (
-                <img src={user.profileImage} alt="Profile" className="w-full h-full object-cover" />
+              {user?.profileImage || user?.profilePictureImageUrl ? (
+                <img src={user.profileImage || user.profilePictureImageUrl} alt="Profile" className="w-full h-full object-cover" />
               ) : (
                 <User size={40} className="text-indigo-300 dark:text-gray-500" />
               )}
@@ -180,19 +201,51 @@ export default function ProfileSettings({ user, setUser }) {
           </form>
         </div>
 
-        {/* 3. EMAIL UPDATE SECTION */}
+        {/* 3. EMAIL UPDATE SECTION (UPDATED WITH OTP FLOW) */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Mail className="text-indigo-500" size={20} />
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Email Address</h3>
           </div>
           <p className="text-sm text-gray-500 mb-4">Current email: <strong className="text-gray-900 dark:text-white">{user?.email}</strong></p>
-          <form onSubmit={handleEmailRequest} className="flex gap-3">
-            <input required type="email" placeholder="Enter new email address" className="flex-1 p-3 border rounded-xl bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
-            <button type="submit" disabled={loadingSection === "email"} className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white px-6 py-2.5 rounded-xl font-bold hover:bg-gray-300 transition flex items-center justify-center min-w-[140px]">
-              {loadingSection === "email" ? <Loader2 className="animate-spin w-5 h-5" /> : "Request Update"}
-            </button>
+          
+          <form onSubmit={showOtpInput ? handleVerifyEmail : handleEmailRequest} className="space-y-3">
+            <div className="flex gap-3">
+              <input 
+                required 
+                type="email" 
+                placeholder="Enter new email address" 
+                className={`flex-1 p-3 border rounded-xl bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none ${showOtpInput ? 'opacity-60 cursor-not-allowed' : ''}`}
+                value={newEmail} 
+                onChange={(e) => setNewEmail(e.target.value)} 
+                disabled={showOtpInput}
+              />
+              {!showOtpInput && (
+                <button type="submit" disabled={loadingSection === "email"} className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white px-6 py-2.5 rounded-xl font-bold hover:bg-gray-300 transition flex items-center justify-center min-w-[140px]">
+                  {loadingSection === "email" ? <Loader2 className="animate-spin w-5 h-5" /> : "Request Update"}
+                </button>
+              )}
+            </div>
+
+            {/* Hidden OTP field that slides down when requested */}
+            {showOtpInput && (
+              <div className="flex gap-3 animate-in fade-in slide-in-from-top-2">
+                <input 
+                  required 
+                  type="text" 
+                  placeholder="Enter 6-digit OTP" 
+                  className="flex-1 p-3 border rounded-xl bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none tracking-widest text-center font-semibold" 
+                  value={otp} 
+                  onChange={(e) => setOtp(e.target.value)} 
+                  maxLength={6}
+                />
+                <button type="submit" disabled={loadingSection === "verifyEmail"} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center justify-center min-w-[140px]">
+                  {loadingSection === "verifyEmail" ? <Loader2 className="animate-spin w-5 h-5" /> : "Verify & Update"}
+                </button>
+              </div>
+            )}
           </form>
+
           {messages.email && <p className={`text-sm mt-2 font-medium ${messages.email.isError ? "text-red-500" : "text-green-500"}`}>{messages.email.text}</p>}
         </div>
 

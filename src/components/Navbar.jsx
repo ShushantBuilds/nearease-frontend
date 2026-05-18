@@ -1,5 +1,5 @@
 import React from "react";
-// FIXED: Added 'Star' to the import list to prevent the white screen crash
+// FIXED: 'Star' is correctly imported to prevent the white screen crash
 import { Search, MapPin, Menu, UserCircle, LogOut, Moon, Sun, Calendar, Briefcase, Shield, Star } from "lucide-react"; 
 
 export default function Navbar({ 
@@ -43,9 +43,20 @@ export default function Navbar({
           {user ? (
             <div className="relative">
               <div onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-3 bg-indigo-50 dark:bg-gray-800 px-4 py-2 rounded-full cursor-pointer hover:bg-indigo-100 dark:hover:bg-gray-700 transition border border-indigo-100 dark:border-gray-700 overflow-hidden">
-                <UserCircle size={24} className="text-indigo-600 dark:text-indigo-400" />
+                
+                {/* FIXED: Dynamically displays the user's profile picture or falls back to the default icon */}
+                {user?.profileImage || user?.profilePictureImageUrl ? (
+                  <img 
+                    src={user.profileImage || user.profilePictureImageUrl} 
+                    alt="Profile" 
+                    className="w-8 h-8 rounded-full object-cover border border-indigo-200 dark:border-indigo-900"
+                  />
+                ) : (
+                  <UserCircle size={24} className="text-indigo-600 dark:text-indigo-400" />
+                )}
+
                 <span className="font-semibold text-indigo-900 dark:text-indigo-100">
-                  {/* FIXED: Checks multiple variations of how Spring Boot might send the name */}
+                  {/* Checks multiple variations of how Spring Boot might send the name */}
                   Hi! {user?.firstName || user?.username || user?.user?.firstName || "User"}
                 </span>
               </div>
@@ -93,7 +104,7 @@ export default function Navbar({
                     <Briefcase size={18} /> Become a Provider
                   </button>
 
-                  {/* FIXED: Replaced user?.role with a safer check for nested roles or arrays */}
+                  {/* Safely checks for nested roles or arrays */}
                   {(user?.role === "ADMIN" || user?.roles?.includes("ROLE_ADMIN")) && (
                     <button 
                       onClick={() => {
