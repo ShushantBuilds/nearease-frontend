@@ -1,68 +1,112 @@
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080") + "/api/bookings";
 
-// Helper to attach auth tokens if you are using them (adjust based on your auth strategy)
-const getHeaders = () => ({
-  "Content-Type": "application/json",
-  // "Authorization": `Bearer ${localStorage.getItem("token")}` // Uncomment if using JWT
-});
+// Helper function to safely extract the token from local storage
+const getAuthToken = () => {
+  const savedUser = localStorage.getItem("nearEaseUser");
+  if (savedUser) {
+    try {
+      const userObj = JSON.parse(savedUser);
+      return userObj.token; // Ensure your backend sends it as 'token'
+    } catch (e) {
+      console.error("Failed to parse user from local storage");
+      return null;
+    }
+  }
+  return null;
+};
+
+// 1. Standard headers for JSON requests (FIXED: Now securely attaches the token!)
+const getHeaders = () => {
+  const headers = { "Content-Type": "application/json" };
+  const token = getAuthToken(); 
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
+// 2. Helper to handle responses safely and throw actual errors
+const fetchWithAuth = async (url, options = {}) => {
+  const res = await fetch(url, options);
+  
+  if (!res.ok) {
+    let errorMessage = `HTTP error! status: ${res.status}`;
+    try {
+      const errorData = await res.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch (e) {
+      const errorText = await res.text();
+      errorMessage = errorText || errorMessage;
+    }
+    throw new Error(errorMessage);
+  }
+  
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
+};
 
 export const BookingAPI = {
   // Get all bookings for the logged-in customer
   getAllBookings: async () => {
-    const res = await fetch(`${BASE_URL}/all-bookings`, { headers: getHeaders() });
-    return res.json();
+    return fetchWithAuth(`${BASE_URL}/all-bookings`, { 
+      headers: getHeaders() 
+    });
   },
 
   // Get booking requests (Only for Providers)
   getBookingRequests: async () => {
-    const res = await fetch(`${BASE_URL}/booking-requests`, { headers: getHeaders() });
-    return res.json();
+    return fetchWithAuth(`${BASE_URL}/booking-requests`, { 
+      headers: getHeaders() 
+    });
   },
 
   // Book a new service
   bookService: async (bookingData) => {
-    const res = await fetch(`${BASE_URL}/bookService`, {
+    return fetchWithAuth(`${BASE_URL}/bookService`, {
       method: "POST",
       headers: getHeaders(),
       body: JSON.stringify(bookingData), // { serviceOfferingId, scheduleTime, workLocation, customerRequest }
     });
-    return res.json();
   },
 
   // Update booking status
   updateStatus: async (bookingId, statusData) => {
-    const res = await fetch(`${BASE_URL}/${bookingId}/status`, {
+    return fetchWithAuth(`${BASE_URL}/${bookingId}/status`, {
       method: "PUT",
       headers: getHeaders(),
       body: JSON.stringify(statusData),
     });
-    return res.json();
   },
 
   // Complete a booking (Provider submits before/after images & OTP)
   completeBooking: async (bookingId, completionData) => {
-    const res = await fetch(`${BASE_URL}/${bookingId}/complete`, {
+    return fetchWithAuth(`${BASE_URL}/${bookingId}/complete`, {
       method: "PUT",
       headers: getHeaders(),
       body: JSON.stringify(completionData), // { otp, beforeImage, afterImage }
     });
-    return res.json();
   },
 
   // OTP Management for bookings
   sendBookingOtp: async (bookingId) => {
-    const res = await fetch(`${BASE_URL}/${bookingId}/send-otp`, { method: "POST", headers: getHeaders() });
-    return res.json();
+    return fetchWithAuth(`${BASE_URL}/${bookingId}/send-otp`, { 
+      method: "POST", 
+      headers: getHeaders() 
+    });
   },
 
   // Cancellation Flow
   requestCancel: async (bookingId) => {
-    const res = await fetch(`${BASE_URL}/${bookingId}/cancel/request`, { method: "POST", headers: getHeaders() });
-    return res.json();
+    return fetchWithAuth(`${BASE_URL}/${bookingId}/cancel/request`, { 
+      method: "POST", 
+      headers: getHeaders() 
+    });
   },
   
   confirmCancel: async (bookingId) => {
-    const res = await fetch(`${BASE_URL}/${bookingId}/cancel/confirm`, { method: "POST", headers: getHeaders() });
-    return res.json();
+    return fetchWithAuth(`${BASE_URL}/${bookingId}/cancel/confirm`, { 
+      method: "POST", 
+      headers: getHeaders() 
+    });
   }
 };

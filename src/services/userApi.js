@@ -1,9 +1,24 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
+// Helper function to safely extract the token from the saved user object
+const getAuthToken = () => {
+  const savedUser = localStorage.getItem("nearEaseUser");
+  if (savedUser) {
+    try {
+      const userObj = JSON.parse(savedUser);
+      return userObj.token; 
+    } catch (e) {
+      console.error("Failed to parse user from local storage");
+      return null;
+    }
+  }
+  return null;
+};
+
 // 1. Standard headers for JSON requests
 const getHeaders = () => {
   const headers = { "Content-Type": "application/json" };
-  const token = localStorage.getItem("token"); // Adjust if you store your token differently
+  const token = getAuthToken(); // <-- FIXED: Now it successfully grabs the token!
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -13,7 +28,7 @@ const getHeaders = () => {
 // 2. Auth headers ONLY (Used for image uploads so we don't break FormData)
 const getAuthHeadersOnly = () => {
   const headers = {};
-  const token = localStorage.getItem("token");
+  const token = getAuthToken(); // <-- FIXED: Now it successfully grabs the token!
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -23,18 +38,30 @@ const getAuthHeadersOnly = () => {
 // 3. Helper to handle responses and throw actual errors for your React catch blocks
 const fetchWithAuth = async (url, options = {}) => {
   const res = await fetch(url, options);
+  
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
+    // Safely attempt to parse error messages (in case backend sends text instead of JSON)
+    let errorMessage = `HTTP error! status: ${res.status}`;
+    try {
+      const errorData = await res.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch (e) {
+      const errorText = await res.text();
+      errorMessage = errorText || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
-  return res.json();
+  
+  // Safely handle empty responses (like 200 OK with no body)
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
 };
 
 export const UserAPI = {
   // --- USER CONTROLLER ---
   updateDetails: async (details) => {
     return fetchWithAuth(`${BASE_URL}/api/user-update/update-details`, {
-      method: "POST", 
+      method: "POST", // Make sure this matches your backend (POST vs PUT)
       headers: getHeaders(), 
       body: JSON.stringify(details)
     });
@@ -51,7 +78,7 @@ export const UserAPI = {
   updateProfileImage: async (formData) => {
     return fetchWithAuth(`${BASE_URL}/api/user-update/profile-image`, {
       method: "POST", 
-      headers: getAuthHeadersOnly(), // Sends token, but lets browser handle Content-Type
+      headers: getAuthHeadersOnly(), // Sends token, lets browser handle Content-Type
       body: formData
     });
   },
