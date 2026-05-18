@@ -14,6 +14,7 @@ import BecomeProvider from "./components/BecomeProvider";
 import ProfileSettings from "./components/ProfileSettings";
 import AdminPanel from "./components/AdminPanel";
 import MyReviews from "./components/MyReviews";
+import ViewProfile from './components/ViewProfile';
 
 // API Services
 import { PublicAPI } from "./services/publicApi";
@@ -269,6 +270,8 @@ export default function App() {
           <MyReviews />
         ) : activePage === "admin" ? (
           <AdminPanel />
+        ) : activePage === "view-profile" ? (
+          <ViewProfile user={user} setActivePage={setActivePage} />
         ) : activePage === "settings" ? (
           <ProfileSettings user={user} setUser={setUser} />
         ) : activePage === "apply-provider" ? (

@@ -1,6 +1,6 @@
 import React from "react";
 // FIXED: 'Star' is correctly imported to prevent the white screen crash
-import { Search, MapPin, Menu, UserCircle, LogOut, Moon, Sun, Calendar, Briefcase, Shield, Star } from "lucide-react"; 
+import { Search, MapPin, Menu, UserCircle, LogOut, Moon, Sun, Calendar, Briefcase, Shield, Star, User, Settings } from "lucide-react"; 
 
 export default function Navbar({ 
   setActivePage, location, setLocation, search, setSearch, user, 
@@ -64,6 +64,18 @@ export default function Navbar({
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden py-2 animate-in fade-in slide-in-from-top-2">
                   
+                  {/* NEW: View Profile Button */}
+                  <button 
+                    onClick={() => {
+                      setActivePage("view-profile");
+                      setIsDropdownOpen(false); 
+                    }} 
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
+                  >
+                    <User size={18} /> View Profile
+                  </button>
+
+                  {/* UPDATED: Profile Settings Button */}
                   <button 
                     onClick={() => {
                       setActivePage("settings");
@@ -71,7 +83,7 @@ export default function Navbar({
                     }} 
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
                   >
-                    <UserCircle size={18} /> Profile Settings
+                    <Settings size={18} /> Profile Settings
                   </button>
 
                   <button 
