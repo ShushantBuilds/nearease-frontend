@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Mail, Lock, Loader2, Eye, EyeOff } from "lucide-react";
 
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 export default function LoginView({ onViewChange, onLoginSuccess, onClose }) {
   const [email, setEmail] = useState("");
