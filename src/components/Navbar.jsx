@@ -106,15 +106,28 @@ export default function Navbar({
                     <Star size={18} /> My Reviews
                   </button>
 
-                  <button 
-                    onClick={() => {
-                      setActivePage("apply-provider");
-                      setIsDropdownOpen(false); 
-                    }} 
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
-                  >
-                    <Briefcase size={18} /> Become a Provider
-                  </button>
+                  {/* --- DYNAMIC PROVIDER BUTTON --- */}
+                  {(user?.role === "PROVIDER" || user?.role === "ROLE_PROVIDER" || user?.roles?.includes("ROLE_PROVIDER")) ? (
+                    <button 
+                      onClick={() => {
+                        setActivePage("provider-dashboard");
+                        setIsDropdownOpen(false); 
+                      }} 
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition cursor-pointer"
+                    >
+                      <Briefcase size={18} /> Provider Workspace
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => {
+                        setActivePage("apply-provider");
+                        setIsDropdownOpen(false); 
+                      }} 
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
+                    >
+                      <Briefcase size={18} /> Become a Provider
+                    </button>
+                  )}
 
                   {/* Safely checks for nested roles or arrays */}
                   {(user?.role === "ADMIN" || user?.roles?.includes("ROLE_ADMIN")) && (
