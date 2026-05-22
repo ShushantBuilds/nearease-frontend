@@ -9,7 +9,7 @@ export default function LoginView({ onViewChange, onLoginSuccess, onClose }) {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLoginSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault(); // <-- Make sure this is here so the page doesn't refresh!
     
     try {
