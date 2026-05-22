@@ -9,44 +9,60 @@ export default function LoginView({ onViewChange, onLoginSuccess, onClose }) {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (loginCredentials) => {
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault(); // <-- Make sure this is here so the page doesn't refresh!
+    
     try {
-      // 1. Standard login call (returns your JWT token)
-      const authResponse = await fetch(`${BASE_URL}/api/auth/login`, {
+      // 1. Standard login call
+      const res = await fetch(`${BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(loginCredentials)
-      }).then(res => res.json());
+        body: JSON.stringify(loginCredentials) // Adjust this to whatever your state is named
+      });
 
-      if (authResponse.token) {
-        // 2. Temporarily save the token so getHeaders() can use it
-        localStorage.setItem("nearEaseUser", JSON.stringify({ token: authResponse.token }));
+      if (!res.ok) {
+        throw new Error("Actual Invalid Credentials from Server");
+      }
 
-        // 3. ✨ THE MAGIC FIX: Fetch the complete profile from your new endpoint
+      const authResponse = await res.json();
+      
+      // ✨ LOOK AT THIS IN YOUR CONSOLE ✨
+      console.log("Backend Login Response:", authResponse);
+
+      // Check if your backend calls it 'token', 'jwt', or 'jwtToken'
+      const token = authResponse.token || authResponse.jwt || authResponse.jwtToken;
+
+      if (token) {
+        // 2. Temporarily save the token
+        localStorage.setItem("nearEaseUser", JSON.stringify({ token: token }));
+
+        // 3. Fetch the complete profile 
         const userProfile = await UserAPI.getMyDetails();
 
-        // 4. Combine the token with the fresh profile data
+        // 4. Combine data
         const completeUser = {
-          token: authResponse.token,
-          role: authResponse.role, // Assuming your auth endpoint still sends the role
+          token: token,
+          role: authResponse.role, 
           id: userProfile.id,
           firstName: userProfile.firstName,
           lastName: userProfile.lastName,
           email: userProfile.email,
           phone: userProfile.phone,
-          profileImage: userProfile.imageUrl // Note: Mapping 'imageUrl' to your frontend 'profileImage' state
+          profileImage: userProfile.imageUrl 
         };
 
-        // 5. Save the complete package to React State and Local Storage
+        // 5. Save and close
         setUser(completeUser);
         localStorage.setItem("nearEaseUser", JSON.stringify(completeUser));
-        
-        // Close modal, redirect, etc.
         setAuthModalView(null); 
+      } else {
+        throw new Error("Login worked, but no Token was received!");
       }
+      
     } catch (error) {
-      console.error("Login failed:", error);
-      alert("Invalid credentials!");
+      console.error("Login Error details:", error);
+      // This will now pop up the TRUE error instead of a fake one
+      alert(error.message || "Something went wrong during login");
     }
   };
 
