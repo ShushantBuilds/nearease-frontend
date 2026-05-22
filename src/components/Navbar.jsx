@@ -1,5 +1,4 @@
 import React from "react";
-// FIXED: 'Star' is correctly imported to prevent the white screen crash
 import { Search, MapPin, Menu, UserCircle, LogOut, Moon, Sun, Calendar, Briefcase, Shield, Star, User, Settings } from "lucide-react"; 
 
 export default function Navbar({ 
@@ -7,6 +6,25 @@ export default function Navbar({
   isDropdownOpen, setIsDropdownOpen, toggleTheme, isDarkMode, 
   handleLogout, setAuthModalView 
 }) {
+
+  // --- NEW: Bulletproof Role Checker ---
+  const checkRole = (roleType) => {
+    if (!user) return false;
+    const roleStr = typeof user.role === 'string' ? user.role.toUpperCase() : "";
+    const rolesArr = Array.isArray(user.roles) ? user.roles.map(r => typeof r === 'string' ? r.toUpperCase() : "") : [];
+    
+    if (roleType === 'ADMIN') {
+      return roleStr === "ADMIN" || roleStr === "ROLE_ADMIN" || rolesArr.includes("ADMIN") || rolesArr.includes("ROLE_ADMIN");
+    }
+    if (roleType === 'PROVIDER') {
+      return roleStr === "PROVIDER" || roleStr === "ROLE_PROVIDER" || rolesArr.includes("PROVIDER") || rolesArr.includes("ROLE_PROVIDER");
+    }
+    return false;
+  };
+
+  const isProvider = checkRole('PROVIDER');
+  const isAdmin = checkRole('ADMIN');
+
   return (
     <nav className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md sticky top-0 z-40 border-b border-gray-200 dark:border-gray-800 transition-colors duration-300 h-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center gap-6 h-full">
@@ -44,7 +62,6 @@ export default function Navbar({
             <div className="relative">
               <div onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-3 bg-indigo-50 dark:bg-gray-800 px-4 py-2 rounded-full cursor-pointer hover:bg-indigo-100 dark:hover:bg-gray-700 transition border border-indigo-100 dark:border-gray-700 overflow-hidden">
                 
-                {/* FIXED: Dynamically displays the user's profile picture or falls back to the default icon */}
                 {user?.profileImage || user?.profilePictureImageUrl ? (
                   <img 
                     src={user.profileImage || user.profilePictureImageUrl} 
@@ -56,7 +73,6 @@ export default function Navbar({
                 )}
 
                 <span className="font-semibold text-indigo-900 dark:text-indigo-100">
-                  {/* Checks multiple variations of how Spring Boot might send the name */}
                   Hi! {user?.firstName || user?.username || user?.user?.firstName || "User"}
                 </span>
               </div>
@@ -64,78 +80,55 @@ export default function Navbar({
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden py-2 animate-in fade-in slide-in-from-top-2">
                   
-                  {/* NEW: View Profile Button */}
                   <button 
-                    onClick={() => {
-                      setActivePage("view-profile");
-                      setIsDropdownOpen(false); 
-                    }} 
+                    onClick={() => { setActivePage("view-profile"); setIsDropdownOpen(false); }} 
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
                   >
                     <User size={18} /> View Profile
                   </button>
 
-                  {/* UPDATED: Profile Settings Button */}
                   <button 
-                    onClick={() => {
-                      setActivePage("settings");
-                      setIsDropdownOpen(false); 
-                    }} 
+                    onClick={() => { setActivePage("settings"); setIsDropdownOpen(false); }} 
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
                   >
                     <Settings size={18} /> Profile Settings
                   </button>
 
                   <button 
-                    onClick={() => {
-                      setActivePage("bookings");
-                      setIsDropdownOpen(false); 
-                    }} 
+                    onClick={() => { setActivePage("bookings"); setIsDropdownOpen(false); }} 
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
                   >
                     <Calendar size={18} /> My Bookings
                   </button>
 
                   <button 
-                    onClick={() => {
-                      setActivePage("my-reviews");
-                      setIsDropdownOpen(false); 
-                    }} 
+                    onClick={() => { setActivePage("my-reviews"); setIsDropdownOpen(false); }} 
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
                   >
                     <Star size={18} /> My Reviews
                   </button>
 
-                  {/* --- DYNAMIC PROVIDER BUTTON --- */}
-                  {(user?.role === "PROVIDER" || user?.role === "ROLE_PROVIDER" || user?.roles?.includes("ROLE_PROVIDER")) ? (
+                  {/* Clean, robust dynamic Provider check */}
+                  {isProvider ? (
                     <button 
-                      onClick={() => {
-                        setActivePage("provider-dashboard");
-                        setIsDropdownOpen(false); 
-                      }} 
+                      onClick={() => { setActivePage("provider-dashboard"); setIsDropdownOpen(false); }} 
                       className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition cursor-pointer"
                     >
                       <Briefcase size={18} /> Provider Workspace
                     </button>
                   ) : (
                     <button 
-                      onClick={() => {
-                        setActivePage("apply-provider");
-                        setIsDropdownOpen(false); 
-                      }} 
+                      onClick={() => { setActivePage("apply-provider"); setIsDropdownOpen(false); }} 
                       className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
                     >
                       <Briefcase size={18} /> Become a Provider
                     </button>
                   )}
 
-                  {/* Safely checks for nested roles or arrays */}
-                  {(user?.role === "ADMIN" || user?.roles?.includes("ROLE_ADMIN")) && (
+                  {/* Clean, robust dynamic Admin check */}
+                  {isAdmin && (
                     <button 
-                      onClick={() => {
-                        setActivePage("admin");
-                        setIsDropdownOpen(false); 
-                      }} 
+                      onClick={() => { setActivePage("admin"); setIsDropdownOpen(false); }} 
                       className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition cursor-pointer"
                     >
                       <Shield size={18} /> Admin Panel
