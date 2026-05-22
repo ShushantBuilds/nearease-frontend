@@ -9,7 +9,7 @@ export default function LoginView({ onViewChange, onLoginSuccess, onClose }) {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLoginSubmit = async (loginCredentials) => {
+  const handleLogin = async (loginCredentials) => {
     try {
       // 1. Standard login call (returns your JWT token)
       const authResponse = await fetch(`${BASE_URL}/api/auth/login`, {
