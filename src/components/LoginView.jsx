@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Mail, Lock, Loader2, Eye, EyeOff } from "lucide-react";
+import { UserAPI } from "../services/userApi"; // <-- ADDED: Needed to fetch the profile!
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -10,36 +11,34 @@ export default function LoginView({ onViewChange, onLoginSuccess, onClose }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e) => {
-    e.preventDefault(); // <-- Make sure this is here so the page doesn't refresh!
+    e.preventDefault(); 
+    setIsLoading(true); // <-- Turn on the loading spinner!
     
     try {
-      // 1. Standard login call
+      // 1. Standard login call (FIXED: Now sending your actual email & password state)
       const res = await fetch(`${BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(loginCredentials) // Adjust this to whatever your state is named
+        body: JSON.stringify({ email: email, password: password }) 
       });
 
       if (!res.ok) {
-        throw new Error("Actual Invalid Credentials from Server");
+        throw new Error("Invalid Email or Password");
       }
 
       const authResponse = await res.json();
-      
-      // ✨ LOOK AT THIS IN YOUR CONSOLE ✨
       console.log("Backend Login Response:", authResponse);
 
-      // Check if your backend calls it 'token', 'jwt', or 'jwtToken'
       const token = authResponse.token || authResponse.jwt || authResponse.jwtToken;
 
       if (token) {
-        // 2. Temporarily save the token
+        // 2. Temporarily save the token so UserAPI can use it in the headers
         localStorage.setItem("nearEaseUser", JSON.stringify({ token: token }));
 
-        // 3. Fetch the complete profile 
+        // 3. Fetch the complete profile from your Spring Boot backend
         const userProfile = await UserAPI.getMyDetails();
 
-        // 4. Combine data
+        // 4. Combine token and fresh database details
         const completeUser = {
           token: token,
           role: authResponse.role, 
@@ -51,18 +50,22 @@ export default function LoginView({ onViewChange, onLoginSuccess, onClose }) {
           profileImage: userProfile.imageUrl 
         };
 
-        // 5. Save and close
-        setUser(completeUser);
+        // 5. Save the complete package locally
         localStorage.setItem("nearEaseUser", JSON.stringify(completeUser));
-        setAuthModalView(null); 
+        
+        // 6. Pass data back to App.jsx and close the modal
+        if (onLoginSuccess) onLoginSuccess(completeUser);
+        if (onClose) onClose();
+        
       } else {
         throw new Error("Login worked, but no Token was received!");
       }
       
     } catch (error) {
       console.error("Login Error details:", error);
-      // This will now pop up the TRUE error instead of a fake one
       alert(error.message || "Something went wrong during login");
+    } finally {
+      setIsLoading(false); // <-- Turn off the loading spinner whether it succeeds or fails
     }
   };
 
