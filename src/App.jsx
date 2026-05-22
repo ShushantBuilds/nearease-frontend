@@ -51,13 +51,41 @@ export default function App() {
   // ==========================================
   // --- NEW: PERSISTENT LOGIN LOGIC ---
   // ==========================================
+  // useEffect(() => {
+  //   const savedUser = localStorage.getItem("nearEaseUser");
+  //   if (savedUser) {
+  //     try {
+  //       setUser(JSON.parse(savedUser));
+  //     } catch (error) {
+  //       console.error("Failed to parse saved user data");
+  //     }
+  //   }
+  // }, []);
+
   useEffect(() => {
     const savedUser = localStorage.getItem("nearEaseUser");
     if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error("Failed to parse saved user data");
+      const parsedUser = JSON.parse(savedUser);
+      setUser(parsedUser); // Immediately log them in with local data so the UI doesn't blink
+
+      // Silently fetch fresh data from the database in the background
+      if (parsedUser.token) {
+        UserAPI.getMyDetails()
+          .then((freshData) => {
+            const updatedUser = { 
+              ...parsedUser, 
+              firstName: freshData.firstName,
+              lastName: freshData.lastName,
+              phone: freshData.phone,
+              profileImage: freshData.imageUrl
+            };
+            setUser(updatedUser);
+            localStorage.setItem("nearEaseUser", JSON.stringify(updatedUser));
+          })
+          .catch((err) => {
+            console.error("Failed to fetch fresh user data", err);
+            // If it fails (e.g., token expired), you might want to log them out here
+          });
       }
     }
   }, []);

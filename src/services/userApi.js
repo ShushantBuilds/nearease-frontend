@@ -59,6 +59,12 @@ const fetchWithAuth = async (url, options = {}) => {
 
 export const UserAPI = {
   // --- USER CONTROLLER ---
+  getMyDetails: async () => {
+    return fetchWithAuth(`${BASE_URL}/api/user-update/me`, {
+      method: "GET", 
+      headers: getHeaders() 
+    });
+  },
   updateDetails: async (details) => {
     return fetchWithAuth(`${BASE_URL}/api/user-update/update-details`, {
       method: "POST", // Make sure this matches your backend (POST vs PUT)
@@ -99,7 +105,6 @@ export const UserAPI = {
     });
   },
 
-  // --- REVIEW CONTROLLER ---
   submitReview: async (reviewData) => {
     return fetchWithAuth(`${BASE_URL}/api/reviews/new/review`, {
       method: "POST", 
@@ -120,7 +125,6 @@ export const UserAPI = {
     });
   },
 
-  // --- MISC CONTROLLERS ---
   uploadImage: async (formData) => {
     return fetchWithAuth(`${BASE_URL}/api/images/upload`, {
       method: "POST",

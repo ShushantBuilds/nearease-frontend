@@ -9,29 +9,44 @@ export default function LoginView({ onViewChange, onLoginSuccess, onClose }) {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) return alert("Please fill in both fields.");
-    
-    setIsLoading(true);
+  const handleLoginSubmit = async (loginCredentials) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+      // 1. Standard login call (returns your JWT token)
+      const authResponse = await fetch(`${BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+        body: JSON.stringify(loginCredentials)
+      }).then(res => res.json());
 
-      if (response.ok) {
-        const data = await response.json();
-        onLoginSuccess(data); 
-        onClose(); 
-      } else {
-        alert("Invalid credentials.");
+      if (authResponse.token) {
+        // 2. Temporarily save the token so getHeaders() can use it
+        localStorage.setItem("nearEaseUser", JSON.stringify({ token: authResponse.token }));
+
+        // 3. ✨ THE MAGIC FIX: Fetch the complete profile from your new endpoint
+        const userProfile = await UserAPI.getMyDetails();
+
+        // 4. Combine the token with the fresh profile data
+        const completeUser = {
+          token: authResponse.token,
+          role: authResponse.role, // Assuming your auth endpoint still sends the role
+          id: userProfile.id,
+          firstName: userProfile.firstName,
+          lastName: userProfile.lastName,
+          email: userProfile.email,
+          phone: userProfile.phone,
+          profileImage: userProfile.imageUrl // Note: Mapping 'imageUrl' to your frontend 'profileImage' state
+        };
+
+        // 5. Save the complete package to React State and Local Storage
+        setUser(completeUser);
+        localStorage.setItem("nearEaseUser", JSON.stringify(completeUser));
+        
+        // Close modal, redirect, etc.
+        setAuthModalView(null); 
       }
     } catch (error) {
-      console.error(error);
-      alert("Network Error. Cannot reach backend.");
-    } finally {
-      setIsLoading(false);
+      console.error("Login failed:", error);
+      alert("Invalid credentials!");
     }
   };
 
