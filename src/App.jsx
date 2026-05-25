@@ -78,7 +78,7 @@ export default function App() {
               lastName: freshData.lastName,
               phone: freshData.phone,
               profileImage: freshData.imageUrl,
-              role: freshData.role || parsedUser.role
+              roles: freshData.roles
             };
             setUser(updatedUser);
             localStorage.setItem("nearEaseUser", JSON.stringify(updatedUser));

@@ -42,6 +42,7 @@ export default function LoginView({ onViewChange, onLoginSuccess, onClose }) {
         const completeUser = {
           token: token,
           role: authResponse.role, 
+          roles: userProfile.roles,
           id: userProfile.id,
           firstName: userProfile.firstName,
           lastName: userProfile.lastName,
