@@ -72,6 +72,14 @@ export const ProviderAPI = {
     });
   },
 
+  addService: async (formData) => {
+    return fetchWithAuth(`${PROVIDER_URL}/addService`, {
+      method: "POST",
+      headers: getAuthHeadersOnly(), // REMOVED JSON CONTENT-TYPE
+      body: formData, // Now accepts the raw FormData object
+    });
+  },
+
   // Portfolio Management
   getMyPortfolio: async () => {
     return fetchWithAuth(`${PROVIDER_URL}/my-portfolio`, { 

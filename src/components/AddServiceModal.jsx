@@ -38,22 +38,29 @@ export default function AddServiceModal({ isOpen, onClose, onSuccess }) {
     
     setIsSubmitting(true);
     try {
-      // 1. Upload the image first
-      const imgData = new FormData();
-      imgData.append("file", imageFile); // 'file' or 'image' depending on your backend expectation
+      // 1. Create a single Form package
+      const submitData = new FormData();
       
-      const uploadRes = await UserAPI.uploadImage(imgData);
-      const imageUrl = uploadRes.url || uploadRes.imageUrl; // Adjust based on your backend response
+      // 2. Add the actual file (Matches @RequestPart("file"))
+      submitData.append("file", imageFile); 
       
-      // 2. Submit the full service with the new image URL
-      await ProviderAPI.addService({
-        ...formData,
-        image: imageUrl // Attach the URL from step 1
-      });
+      // 3. Create the JSON Blob (Matches @RequestPart("serviceDetails"))
+      // This is required for Spring Boot to map the text to your ServiceOfferingRequest DTO
+      const serviceDetailsBlob = new Blob([JSON.stringify({
+        serviceTypeId: formData.serviceTypeId,
+        price: formData.price,
+        description: formData.description
+      })], { type: "application/json" });
+      
+      submitData.append("serviceDetails", serviceDetailsBlob);
+
+      // 4. Send everything directly to the AddService endpoint in one shot!
+      await ProviderAPI.addService(submitData);
 
       onSuccess(); // Triggers a refresh in the dashboard
       onClose();   // Closes the modal
     } catch (err) {
+      console.error(err);
       alert("Failed to add service. Please try again.");
     } finally {
       setIsSubmitting(false);
