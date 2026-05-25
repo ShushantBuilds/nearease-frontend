@@ -16,9 +16,20 @@ const getAuthToken = () => {
   return null;
 };
 
-// 1. Standard headers for JSON requests (FIXED: Now includes the token!)
+// 1. Standard headers for JSON requests 
 const getHeaders = () => {
   const headers = { "Content-Type": "application/json" };
+  const token = getAuthToken(); 
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
+// --- THIS WAS THE MISSING PIECE ---
+// Auth headers ONLY (Lets browser handle multipart form data)
+const getAuthHeadersOnly = () => {
+  const headers = {};
   const token = getAuthToken(); 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
@@ -52,16 +63,16 @@ export const ProviderAPI = {
     return fetchWithAuth(`${PROVIDER_URL}/apply`, {
       method: "POST",
       headers: getHeaders(),
-      body: JSON.stringify(applicationData), // { bio, skills, experience, address }
+      body: JSON.stringify(applicationData), 
     });
   },
 
-  // Add a new service offering
-  addService: async (serviceData) => {
+  // Add a new service offering (UPDATED for FormData)
+  addService: async (formData) => {
     return fetchWithAuth(`${PROVIDER_URL}/addService`, {
       method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(serviceData), // { serviceTypeId, price, description, image }
+      headers: getAuthHeadersOnly(), // Now safely defined above!
+      body: formData, 
     });
   },
 
@@ -69,14 +80,6 @@ export const ProviderAPI = {
   getDashboard: async () => {
     return fetchWithAuth(`${PROVIDER_URL}/my/DashBoard`, { 
       headers: getHeaders() 
-    });
-  },
-
-  addService: async (formData) => {
-    return fetchWithAuth(`${PROVIDER_URL}/addService`, {
-      method: "POST",
-      headers: getAuthHeadersOnly(), // REMOVED JSON CONTENT-TYPE
-      body: formData, // Now accepts the raw FormData object
     });
   },
 
