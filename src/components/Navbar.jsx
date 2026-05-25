@@ -7,19 +7,36 @@ export default function Navbar({
   handleLogout, setAuthModalView 
 }) {
 
-  // --- NEW: Bulletproof Role Checker ---
+  // --- BULLETPROOF ROLE CHECKER ---
+  // This deeply inspects the user object to find roles, no matter how Spring Boot formats them.
   const checkRole = (roleType) => {
     if (!user) return false;
-    const roleStr = typeof user.role === 'string' ? user.role.toUpperCase() : "";
-    const rolesArr = Array.isArray(user.roles) ? user.roles.map(r => typeof r === 'string' ? r.toUpperCase() : "") : [];
     
-    if (roleType === 'ADMIN') {
-      return roleStr === "ADMIN" || roleStr === "ROLE_ADMIN" || rolesArr.includes("ADMIN") || rolesArr.includes("ROLE_ADMIN");
+    const targetRole = roleType.toUpperCase(); // e.g., 'ADMIN'
+    const targetRoleFull = `ROLE_${targetRole}`; // e.g., 'ROLE_ADMIN'
+    
+    let userRoles = [];
+
+    // 1. Check if the role is attached directly as a string
+    if (typeof user.role === 'string') {
+      userRoles.push(user.role.toUpperCase());
     }
-    if (roleType === 'PROVIDER') {
-      return roleStr === "PROVIDER" || roleStr === "ROLE_PROVIDER" || rolesArr.includes("PROVIDER") || rolesArr.includes("ROLE_PROVIDER");
+
+    // 2. Check if roles are sent in an array (Spring Security standard)
+    if (Array.isArray(user.roles)) {
+      user.roles.forEach(r => {
+        if (typeof r === 'string') {
+          userRoles.push(r.toUpperCase());
+        } else if (typeof r === 'object' && r !== null) {
+          // Handles custom Role objects or Spring's GrantedAuthority objects
+          if (r.name) userRoles.push(String(r.name).toUpperCase());
+          if (r.authority) userRoles.push(String(r.authority).toUpperCase());
+        }
+      });
     }
-    return false;
+
+    // Return true if either "ADMIN" or "ROLE_ADMIN" is found in the collected roles
+    return userRoles.includes(targetRole) || userRoles.includes(targetRoleFull);
   };
 
   const isProvider = checkRole('PROVIDER');
@@ -80,61 +97,42 @@ export default function Navbar({
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden py-2 animate-in fade-in slide-in-from-top-2">
                   
-                  <button 
-                    onClick={() => { setActivePage("view-profile"); setIsDropdownOpen(false); }} 
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
-                  >
+                  {/* --- BASE USER OPTIONS (Visible to everyone) --- */}
+                  <button onClick={() => { setActivePage("view-profile"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer">
                     <User size={18} /> View Profile
                   </button>
 
-                  <button 
-                    onClick={() => { setActivePage("settings"); setIsDropdownOpen(false); }} 
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
-                  >
+                  <button onClick={() => { setActivePage("settings"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer">
                     <Settings size={18} /> Profile Settings
                   </button>
 
-                  <button 
-                    onClick={() => { setActivePage("bookings"); setIsDropdownOpen(false); }} 
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
-                  >
+                  <button onClick={() => { setActivePage("bookings"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer">
                     <Calendar size={18} /> My Bookings
                   </button>
 
-                  <button 
-                    onClick={() => { setActivePage("my-reviews"); setIsDropdownOpen(false); }} 
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
-                  >
+                  <button onClick={() => { setActivePage("my-reviews"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer">
                     <Star size={18} /> My Reviews
                   </button>
 
-                  {/* Clean, robust dynamic Provider check */}
+                  {/* --- PROVIDER OPTIONS --- */}
                   {isProvider ? (
-                    <button 
-                      onClick={() => { setActivePage("provider-dashboard"); setIsDropdownOpen(false); }} 
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition cursor-pointer"
-                    >
+                    <button onClick={() => { setActivePage("provider-dashboard"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition cursor-pointer">
                       <Briefcase size={18} /> Provider Workspace
                     </button>
                   ) : (
-                    <button 
-                      onClick={() => { setActivePage("apply-provider"); setIsDropdownOpen(false); }} 
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer"
-                    >
+                    <button onClick={() => { setActivePage("apply-provider"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer">
                       <Briefcase size={18} /> Become a Provider
                     </button>
                   )}
 
-                  {/* Clean, robust dynamic Admin check */}
+                  {/* --- ADMIN OPTIONS --- */}
                   {isAdmin && (
-                    <button 
-                      onClick={() => { setActivePage("admin"); setIsDropdownOpen(false); }} 
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition cursor-pointer"
-                    >
+                    <button onClick={() => { setActivePage("admin"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition cursor-pointer">
                       <Shield size={18} /> Admin Panel
                     </button>
                   )}
 
+                  {/* LOGOUT */}
                   <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition cursor-pointer border-t border-gray-100 dark:border-gray-700">
                     <LogOut size={18} /> Logout
                   </button>
