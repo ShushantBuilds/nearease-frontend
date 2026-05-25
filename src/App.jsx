@@ -152,11 +152,15 @@ export default function App() {
   };
 
   const filteredListings = listings.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
-    const matchesLoc = item.location ? item.location.toLowerCase().includes(location.toLowerCase()) : true;
+    // Safely check for item.name, fallback to an empty string if it doesn't exist
+    const itemName = item?.name || item?.serviceType?.name || ""; 
+    const matchesSearch = itemName.toLowerCase().includes(search.toLowerCase());
+    
+    const itemLoc = item?.location || item?.provider?.address || "";
+    const matchesLoc = itemLoc ? itemLoc.toLowerCase().includes(location.toLowerCase()) : true;
+    
     return matchesSearch && matchesLoc;
   });
-
   // --- UPDATED LOGOUT LOGIC ---
   const handleLogout = () => { 
     setUser(null); 
