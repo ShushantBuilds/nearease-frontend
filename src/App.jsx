@@ -107,15 +107,23 @@ export default function App() {
     fetchSubCats();
   }, [activeMainCategory]);
 
-  // 3. THE MASTER FETCHER: Get Listings
   useEffect(() => {
     const fetchListings = async () => {
-      if (!activeSubCategory || !activeSubCategory.id) return; 
-
       setIsLoadingData(true);
       try {
-        const data = await PublicAPI.getOfferingsByType(activeSubCategory.id);
+        let data = [];
+        
+        if (activeMainCategory === "All") {
+          // If "All" is selected, fetch everything
+          data = await PublicAPI.getAllOfferings(); 
+        } else if (activeSubCategory && activeSubCategory.id) {
+          // If a specific subcategory is selected, fetch only those
+          data = await PublicAPI.getOfferingsByType(activeSubCategory.id);
+        }
+
+        // Safely set the listings
         setListings(Array.isArray(data) ? data : []);
+
       } catch (error) {
         console.error("Failed to fetch listings:", error);
         setListings([]); 
@@ -124,10 +132,11 @@ export default function App() {
       }
     };
 
+    // Only run this fetcher when we are on the home page
     if (activePage === "home") {
       fetchListings();
     }
-  }, [activeSubCategory, activePage]); 
+  }, [activeMainCategory, activeSubCategory, activePage]); 
 
   const scrollToContent = () => {
     if (mainContentRef.current) {

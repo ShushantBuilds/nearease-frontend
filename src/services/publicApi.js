@@ -26,6 +26,13 @@ export const PublicAPI = {
     }
   },
 
+  getAllOfferings: async () => {
+    // Replace with your actual backend endpoint for all services
+    const res = await fetch(`${BASE_URL}/api/public/services/all`); 
+    if (!res.ok) throw new Error("Failed to fetch all services");
+    return res.json();
+  },
+
   // 3. Get provider offerings for a specific type ID
   getOfferingsByType: async (typeId) => {
     try {
