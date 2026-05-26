@@ -7,6 +7,7 @@ import AuthModal from "./components/AuthModal";
 import ServiceCard from "./components/ServiceCard";
 import ServicePage from "./components/ServicePage";
 import CheckoutPage from "./components/CheckoutPage"; 
+import PaymentGateway from "./components/PaymentGateway"; // Make sure to import this!
 import PreviewModal from "./components/PreviewModal";
 import MyBookings from "./components/MyBookings"; 
 import ProviderDashboard from "./components/ProviderDashboard";
@@ -43,30 +44,20 @@ export default function App() {
   const [selectedModalListing, setSelectedModalListing] = useState(null);
   const [activePage, setActivePage] = useState("home"); 
   const [bookingService, setBookingService] = useState(null);
+  const [checkoutData, setCheckoutData] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const mainContentRef = useRef(null);
 
   // ==========================================
-  // --- NEW: PERSISTENT LOGIN LOGIC ---
+  // --- PERSISTENT LOGIN LOGIC ---
   // ==========================================
-  // useEffect(() => {
-  //   const savedUser = localStorage.getItem("nearEaseUser");
-  //   if (savedUser) {
-  //     try {
-  //       setUser(JSON.parse(savedUser));
-  //     } catch (error) {
-  //       console.error("Failed to parse saved user data");
-  //     }
-  //   }
-  // }, []);
-
   useEffect(() => {
     const savedUser = localStorage.getItem("nearEaseUser");
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
-      setUser(parsedUser); // Immediately log them in with local data so the UI doesn't blink
+      setUser(parsedUser); // Immediately log them in
 
       // Silently fetch fresh data from the database in the background
       if (parsedUser.token) {
@@ -85,13 +76,12 @@ export default function App() {
           })
           .catch((err) => {
             console.error("Failed to fetch fresh user data", err);
-            // If it fails (e.g., token expired), you might want to log them out here
           });
       }
     }
   }, []);
 
-  // 1. Initial Load: Fetch main categories from backend
+  // 1. Initial Load: Fetch main categories
   useEffect(() => {
     const loadCategories = async () => {
       const data = await PublicAPI.getCategories();
@@ -103,8 +93,8 @@ export default function App() {
   // 2. Fetch Subcategories ONLY when Main Category changes
   useEffect(() => {
     const fetchSubCats = async () => {
-      setActiveSubCategory(null); // Reset subcategory when main category changes
-      setListings([]); // CRITICAL: Clear listings because we can't search by Main Category alone
+      setActiveSubCategory(null);
+      setListings([]);
 
       if (activeMainCategory === "All") {
         setSubCategories([]);
@@ -117,18 +107,15 @@ export default function App() {
     fetchSubCats();
   }, [activeMainCategory]);
 
-  // 3. THE MASTER FETCHER: Get Listings ONLY when a Sub-Category is clicked
+  // 3. THE MASTER FETCHER: Get Listings
   useEffect(() => {
     const fetchListings = async () => {
-      if (!activeSubCategory || !activeSubCategory.id) {
-        return; 
-      }
+      if (!activeSubCategory || !activeSubCategory.id) return; 
 
       setIsLoadingData(true);
       try {
         const data = await PublicAPI.getOfferingsByType(activeSubCategory.id);
         setListings(Array.isArray(data) ? data : []);
-
       } catch (error) {
         console.error("Failed to fetch listings:", error);
         setListings([]); 
@@ -152,19 +139,22 @@ export default function App() {
   };
 
   const filteredListings = listings.filter((item) => {
-    // Safely check for item.name, fallback to an empty string if it doesn't exist
     const itemName = item?.name || item?.serviceType?.name || ""; 
     const matchesSearch = itemName.toLowerCase().includes(search.toLowerCase());
+
+    const matchesCategory = activeMainCategory === "All" || 
+                            item?.serviceType?.category?.name === activeMainCategory || 
+                            item?.category === activeMainCategory;
     
     const itemLoc = item?.location || item?.provider?.address || "";
     const matchesLoc = itemLoc ? itemLoc.toLowerCase().includes(location.toLowerCase()) : true;
     
-    return matchesSearch && matchesLoc;
+    return matchesSearch && matchesLoc && matchesCategory;
   });
-  // --- UPDATED LOGOUT LOGIC ---
+
   const handleLogout = () => { 
     setUser(null); 
-    localStorage.removeItem("nearEaseUser"); // Wipes the memory on logout
+    localStorage.removeItem("nearEaseUser"); 
     setIsDropdownOpen(false); 
     setActivePage("home"); 
   };
@@ -284,7 +274,15 @@ export default function App() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {filteredListings.length > 0 ? (
                     filteredListings.map((item, i) => (
-                      <ServiceCard key={item.id || i} item={item} onClick={setSelectedModalListing} />
+                      <ServiceCard 
+                        key={item.id || i} 
+                        item={item} 
+                        onCardClick={(selectedItem) => {
+                          setBookingService(selectedItem);
+                          setActivePage("service-details");
+                        }}
+                        onPreviewClick={(selectedItem) => setSelectedModalListing(selectedItem)}
+                      />
                     ))
                   ) : (
                     !isLoadingData && (
@@ -297,6 +295,29 @@ export default function App() {
               </div>
             </main>
           </>
+        ) : activePage === "service-details" ? (
+          <ServicePage 
+             service={bookingService} 
+             onBack={() => setActivePage("home")} 
+             onProceedToCheckout={() => setActivePage("checkout")} 
+          />
+        ) : activePage === "checkout" ? (
+          <CheckoutPage 
+             service={bookingService} 
+             onBack={() => setActivePage("home")} 
+             // 2. UPDATED: Save the form data before changing the page
+             onProceedToGateway={(formData) => { 
+                setCheckoutData(formData); 
+                setActivePage("payment-gateway"); 
+             }} 
+          />
+        ) : activePage === "payment-gateway" ? (
+          <PaymentGateway 
+             service={bookingService}
+             checkoutData={checkoutData} // 3. UPDATED: Pass the data into the gateway
+             onComplete={() => setActivePage("home")}
+             onFail={() => setActivePage("checkout")}
+          />
         ) : activePage === "bookings" ? (
           <MyBookings />
         ) : activePage === "my-reviews" ? (
@@ -311,11 +332,7 @@ export default function App() {
           <BecomeProvider user={user} onBack={() => setActivePage("home")} />
         ) : activePage === "provider-dashboard" ? (
           <ProviderDashboard />
-        ) : activePage === 'checkout' ? (
-          <CheckoutPage service={bookingService} onBack={() => setActivePage("home")} />
-        ) : (
-          <ServicePage service={activePage} onBack={() => setActivePage("home")} onProceedToPayment={(service) => { setBookingService(service); setActivePage('checkout'); }} />
-        )}
+        ) : null}
 
         {/* --- MODALS --- */}
         <AuthModal 
@@ -323,7 +340,6 @@ export default function App() {
           view={authModalView} 
           onClose={() => setAuthModalView(null)} 
           onViewChange={setAuthModalView} 
-          // --- UPDATED: Save user to local storage on successful login ---
           onLoginSuccess={(userData) => {
             setUser(userData);
             localStorage.setItem("nearEaseUser", JSON.stringify(userData));
@@ -333,7 +349,11 @@ export default function App() {
         <PreviewModal 
           listing={selectedModalListing} 
           onClose={() => setSelectedModalListing(null)} 
-          onView={() => { setActivePage(selectedModalListing); setSelectedModalListing(null); }} 
+          onProceedToDetails={(item) => {
+             setBookingService(item);
+             setActivePage("service-details");
+             setSelectedModalListing(null);
+          }} 
         />
         
       </div>

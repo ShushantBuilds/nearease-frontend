@@ -1,88 +1,122 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, User, MapPin, CalendarDays, Star } from "lucide-react";
-import PaymentForm from "./PaymentForm"; 
+import { ArrowLeft, User, MapPin, Clock, CalendarDays, ShieldCheck } from "lucide-react";
 
-export default function CheckoutPage({ service, onBack }) {
+export default function CheckoutPage({ service, onBack, onProceedToGateway }) {
   const [formData, setFormData] = useState({
     firstName: "", lastName: "", phone: "", email: "",
-    street: "", apt: "", city: "", state: "", zip: ""
+    street: "", apt: "", city: "", state: "", zip: "",
+    bookingDate: "", bookingTime: ""
   });
-  const [saveDetails, setSaveDetails] = useState(true);
 
   const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const serviceFee = 10.00;
-  const tax = 3.90;
-  const grandTotal = serviceFee + tax + 50.00; 
-
-  const orderSummaryItems = [
-    { name: `${service.name} Booking`, price: 50.00 },
-    { name: 'Service Fee', price: serviceFee },
-    { name: 'Tax', price: tax },
-  ];
+  const serviceFee = 50.00; // Example platform fee
+  const grandTotal = (service?.price || 0) + serviceFee; 
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
+  const handleProceed = () => {
+    // Basic validation
+    if (!formData.bookingDate || !formData.bookingTime || !formData.street || !formData.firstName) {
+      alert("Please fill in your name, address, and select a date/time.");
+      return;
+    }
+    // Proceed to Gateway
+    onProceedToGateway(formData);
+  };
+
+  if (!service) return null;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-in fade-in duration-500">
-      <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 font-medium mb-10 transition cursor-pointer"><ArrowLeft size={20} /> Back to details</button>
+      <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 font-medium mb-10 transition cursor-pointer">
+        <ArrowLeft size={20} /> Back to Details
+      </button>
       
-      <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-10 leading-tight">Secure Checkout & Booking</h1>
+      <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-10">Secure Checkout</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.5fr,1fr] gap-12 items-start">
-        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-8 md:p-10 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col gap-8">
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white"><User size={22} className="text-indigo-600" /> 1. Your Details & Address</h3>
-            <div className="grid grid-cols-2 gap-5">
-              {[ {label: 'First Name', name: 'firstName'}, {label: 'Last Name', name: 'lastName'}, {label: 'Phone Number', name: 'phone', type: 'tel'}, {label: 'Email Address', name: 'email', type: 'email'}].map(field => (
-                <div key={field.name} className="col-span-1">
-                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1.5 ml-1 font-medium">{field.label}</label>
-                  <input name={field.name} type={field.type || 'text'} value={formData[field.name]} onChange={handleInputChange} placeholder={field.label} className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white placeholder-gray-400" />
-                </div>
-              ))}
+        
+        {/* Left Column: Data Entry */}
+        <div className="space-y-8">
+          
+          {/* SECTION 1: Date and Time (FIXED UX) */}
+          <div className="bg-white dark:bg-gray-800 p-8 md:p-10 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
+            <h3 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white mb-6">
+              <Clock size={22} className="text-indigo-600" /> 1. Schedule Appointment
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1.5 ml-1 font-medium">Select Date</label>
+                <input 
+                  type="date" name="bookingDate" value={formData.bookingDate} onChange={handleInputChange} 
+                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white cursor-pointer focus:border-indigo-500 transition" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1.5 ml-1 font-medium">Select Time</label>
+                <input 
+                  type="time" name="bookingTime" value={formData.bookingTime} onChange={handleInputChange} 
+                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white cursor-pointer focus:border-indigo-500 transition" 
+                />
+              </div>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white"><MapPin size={22} className="text-indigo-600" /> Booking Address</h3>
-            <div className="grid grid-cols-2 gap-5">
-              {[ {label: 'Street Address', name: 'street', colSpan: 1}, {label: 'Apartment/Unit', name: 'apt', colSpan: 1}, {label: 'City', name: 'city'}, {label: 'State/Province', name: 'state'}, {label: 'ZIP/Postal Code', name: 'zip'}].map(field => (
-                <div key={field.name} className={field.colSpan === 1 ? 'col-span-1' : 'col-span-2'}>
-                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1.5 ml-1 font-medium">{field.label}</label>
-                  <input name={field.name} type="text" value={formData[field.name]} onChange={handleInputChange} placeholder={field.label} className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white placeholder-gray-400" />
-                </div>
-              ))}
+          {/* SECTION 2: Address & Details */}
+          <div className="bg-white dark:bg-gray-800 p-8 md:p-10 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-8">
+            <div>
+              <h3 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white mb-6">
+                <User size={22} className="text-indigo-600" /> 2. Personal Details
+              </h3>
+              <div className="grid grid-cols-2 gap-5">
+                <input name="firstName" placeholder="First Name" onChange={handleInputChange} className="col-span-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
+                <input name="lastName" placeholder="Last Name" onChange={handleInputChange} className="col-span-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
+                <input name="phone" type="tel" placeholder="Phone Number" onChange={handleInputChange} className="col-span-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
+                <input name="email" type="email" placeholder="Email Address" onChange={handleInputChange} className="col-span-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
+              </div>
             </div>
-            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-               <input type="checkbox" id="saveDetails" checked={saveDetails} onChange={() => setSaveDetails(!saveDetails)} className="w-5 h-5 accent-indigo-600 cursor-pointer" />
-               <label htmlFor="saveDetails" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">Save for future bookings</label>
+
+            <div>
+              <h3 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white mb-6">
+                <MapPin size={22} className="text-indigo-600" /> 3. Service Location
+              </h3>
+              <div className="grid grid-cols-2 gap-5">
+                <input name="street" placeholder="Street Address" onChange={handleInputChange} className="col-span-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
+                <input name="city" placeholder="City" onChange={handleInputChange} className="col-span-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
+                <input name="zip" placeholder="ZIP / Postal Code" onChange={handleInputChange} className="col-span-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="space-y-8 lg:sticky lg:top-28">
-          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Your Booking</h3>
+        {/* Right Column: Order Summary & Make Payment */}
+        <div className="lg:sticky lg:top-28 space-y-6">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Order Summary</h3>
             <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
-                <img src={service.images[0]} alt={service.name} className="w-16 h-16 rounded-xl object-cover shrink-0" />
-                <div className="space-y-1">
-                    <p className="font-semibold text-gray-900 dark:text-white leading-tight">{service.name}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1.5"><CalendarDays size={16} className="text-indigo-600" /> Confirmed, Oct 26</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1.5"><Star size={16} className="text-yellow-500 fill-current" /> {service.rating} ({service.reviews} reviews)</p>
+                <img src={service.imageUrl || (service.images && service.images[0]) || "https://via.placeholder.com/100"} alt="Service" className="w-16 h-16 rounded-xl object-cover shrink-0" />
+                <div>
+                    <p className="font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1">{service.name || service.serviceType?.name}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">₹{service.price || 0}</p>
                 </div>
+            </div>
+            
+            <div className="space-y-3 font-medium text-sm text-gray-700 dark:text-gray-300 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <div className="flex justify-between items-center"><p>Service Cost</p><p>₹{service.price || 0}</p></div>
+              <div className="flex justify-between items-center"><p>Platform Fee</p><p>₹{serviceFee}</p></div>
+              <div className="flex justify-between items-center text-xl font-black text-gray-900 dark:text-white pt-3 border-t border-gray-100 dark:border-gray-700">
+                <p>Total</p><p>₹{grandTotal}</p>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-6">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">2. Order Summary & Payment</h3>
-            <div className="space-y-3 font-medium text-sm text-gray-700 dark:text-gray-300">
-              {orderSummaryItems.map((item, i) => (
-                <div key={i} className="flex justify-between items-center"><p>{item.name}</p><p>${item.price.toFixed(2)}</p></div>
-              ))}
-              <div className="flex justify-between items-center text-lg font-bold text-gray-900 dark:text-white pt-3 border-t border-gray-100 dark:border-gray-700"><p>Grand Total</p><p>${grandTotal.toFixed(2)}</p></div>
-            </div>
-            <PaymentForm grandTotal={grandTotal} serviceName={service.name} />
-          </div>
+          <button 
+            onClick={handleProceed}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-2xl transition shadow-xl text-lg flex justify-center items-center gap-3 transform hover:-translate-y-1 cursor-pointer"
+          >
+            <ShieldCheck size={24} /> Make Payment
+          </button>
         </div>
       </div>
     </div>
