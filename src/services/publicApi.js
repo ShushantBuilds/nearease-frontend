@@ -27,10 +27,16 @@ export const PublicAPI = {
   },
 
   getAllOfferings: async () => {
-    // Replace with your actual backend endpoint for all services
-    const res = await fetch(`${BASE_URL}/api/public/services/all`); 
-    if (!res.ok) throw new Error("Failed to fetch all services");
-    return res.json();
+    try {
+      // Assuming your backend has an endpoint to get all services
+      // If it doesn't, you need to create a simple @GetMapping("/services/all") in PublicController
+      const response = await fetch(`${BASE_URL}/api/public/services/all`);
+      if (!response.ok) throw new Error("Failed to fetch all services");
+      return await response.json(); 
+    } catch (error) {
+      console.error("Error in getAllOfferings:", error);
+      return [];
+    }
   },
 
   // 3. Get provider offerings for a specific type ID

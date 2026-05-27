@@ -121,7 +121,6 @@ export default function App() {
           data = await PublicAPI.getOfferingsByType(activeSubCategory.id);
         }
 
-        // Safely set the listings
         setListings(Array.isArray(data) ? data : []);
 
       } catch (error) {
@@ -132,7 +131,6 @@ export default function App() {
       }
     };
 
-    // Only run this fetcher when we are on the home page
     if (activePage === "home") {
       fetchListings();
     }
