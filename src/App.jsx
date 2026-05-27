@@ -339,6 +339,8 @@ export default function App() {
           <BecomeProvider user={user} onBack={() => setActivePage("home")} />
         ) : activePage === "provider-dashboard" ? (
           <ProviderDashboard />
+        ) : activePage === "add-service" ? (
+          <ProviderDashboard defaultOpenAddService={true} />
         ) : null}
 
         {/* --- MODALS --- */}
