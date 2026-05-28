@@ -19,17 +19,26 @@ export default function Navbar({
     
     let userRoles = [];
 
-    if (typeof user.role === 'string') {
-      userRoles.push(user.role.toUpperCase());
-    }
+    // 1. Check direct string role
+    if (typeof user.role === 'string') userRoles.push(user.role.toUpperCase());
 
+    // 2. Check 'roles' array
     if (Array.isArray(user.roles)) {
       user.roles.forEach(r => {
-        if (typeof r === 'string') {
-          userRoles.push(r.toUpperCase());
-        } else if (typeof r === 'object' && r !== null) {
+        if (typeof r === 'string') userRoles.push(r.toUpperCase());
+        if (typeof r === 'object' && r !== null) {
           if (r.name) userRoles.push(String(r.name).toUpperCase());
           if (r.authority) userRoles.push(String(r.authority).toUpperCase());
+        }
+      });
+    }
+
+    // 3. Check Spring Security's default 'authorities' array
+    if (Array.isArray(user.authorities)) {
+      user.authorities.forEach(auth => {
+        if (typeof auth === 'string') userRoles.push(auth.toUpperCase());
+        if (typeof auth === 'object' && auth !== null) {
+          if (auth.authority) userRoles.push(String(auth.authority).toUpperCase());
         }
       });
     }

@@ -235,9 +235,10 @@ export default function ProviderDashboard() {
         </div>
       )}
       <AddServiceModal 
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSuccess={fetchData} 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSuccess={() => refreshDashboardData()}
+        hasExistingService={dashboardData?.activeServices?.length > 0} 
       />
     </div>
   );
