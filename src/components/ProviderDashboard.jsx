@@ -1,37 +1,37 @@
 import React, { useState, useEffect } from "react";
 import { 
   Briefcase, DollarSign, Clock, CheckCircle, 
-  XCircle, MapPin, Calendar, User, Loader2, Plus 
+  AlertCircle, MapPin, Calendar, User, Loader2, Plus 
 } from "lucide-react";
 import { ProviderAPI } from "../services/providerApi";
 import { BookingAPI } from "../services/bookingApi";
 import AddServiceModal from "./AddServiceModal";
 
 export default function ProviderDashboard() {
-  const [activeTab, setActiveTab] = useState("overview"); // 'overview' or 'requests'
-  const [dashboardStats, setDashboardStats] = useState(null);
+  const [activeTab, setActiveTab] = useState("overview"); 
+  const [dashboardData, setDashboardData] = useState(null); // Unified name
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // State for completing a job (OTP handling)
   const [completingJobId, setCompletingJobId] = useState(null);
   const [otpCode, setOtpCode] = useState("");
+  
+  // Unified modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    refreshDashboardData(); // Unified function name
   }, []);
 
-  const fetchData = async () => {
+  const refreshDashboardData = async () => {
     setIsLoading(true);
     try {
-      // Fetch both dashboard stats and booking requests simultaneously
       const [statsData, requestsData] = await Promise.all([
         ProviderAPI.getDashboard().catch(() => null),
         BookingAPI.getBookingRequests().catch(() => [])
       ]);
       
-      setDashboardStats(statsData);
+      setDashboardData(statsData);
       setRequests(Array.isArray(requestsData) ? requestsData : []);
     } catch (error) {
       console.error("Error loading dashboard:", error);
@@ -43,7 +43,6 @@ export default function ProviderDashboard() {
   const handleUpdateStatus = async (bookingId, newStatus) => {
     try {
       await BookingAPI.updateStatus(bookingId, { status: newStatus });
-      // Update local state to instantly reflect the change
       setRequests(requests.map(req => req.id === bookingId ? { ...req, status: newStatus } : req));
     } catch (error) {
       alert("Failed to update booking status.");
@@ -59,7 +58,6 @@ export default function ProviderDashboard() {
     try {
       await BookingAPI.completeBooking(bookingId, { 
         otp: otpCode,
-        // In a future update, you can add file uploaders for these images
         beforeImage: "placeholder_url", 
         afterImage: "placeholder_url" 
       });
@@ -73,11 +71,31 @@ export default function ProviderDashboard() {
     }
   };
 
+  // SAFETY NET 1: Loading State
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
         <p className="text-gray-500 font-medium">Loading your workspace...</p>
+      </div>
+    );
+  }
+
+  // SAFETY NET 2: Backend Crash / Empty Data Check (Prevents White Screen)
+  if (!dashboardData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <AlertCircle className="text-red-500 w-16 h-16 mb-4" />
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Failed to load data</h2>
+        <p className="text-gray-500 max-w-md mt-2">
+          We could not connect to your provider profile. Ensure your backend is running and the database is connected properly.
+        </p>
+        <button 
+          onClick={refreshDashboardData}
+          className="mt-6 bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-indigo-700 transition"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
@@ -96,9 +114,9 @@ export default function ProviderDashboard() {
             Overview
           </button>
 
-            <button 
+          <button 
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-indigo-600 text-white px-4 py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition flex items-center gap-2 shadow-sm"
+            className="bg-indigo-600 text-white px-4 py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition flex items-center gap-2 shadow-sm ml-1 mr-1"
           >
             <Plus size={18} /> New Service
           </button>
@@ -126,7 +144,7 @@ export default function ProviderDashboard() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Earnings</p>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">₹{dashboardStats?.totalEarnings || 0}</h3>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">₹{dashboardData?.totalEarning || 0}</h3>
             </div>
           </div>
           
@@ -136,7 +154,7 @@ export default function ProviderDashboard() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Completed Jobs</p>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardStats?.completedJobs || 0}</h3>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData?.completedJobs || 0}</h3>
             </div>
           </div>
 
@@ -146,7 +164,7 @@ export default function ProviderDashboard() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Pending Requests</p>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{requests.filter(r => r.status === "PENDING").length}</h3>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData?.pendingRequest || 0}</h3>
             </div>
           </div>
         </div>
@@ -193,7 +211,6 @@ export default function ProviderDashboard() {
                     )}
                   </div>
 
-                  {/* ACTION BUTTONS BASED ON STATUS */}
                   {job.status === "PENDING" && (
                     <div className="flex gap-3 mt-4">
                       <button onClick={() => handleUpdateStatus(job.id, "CONFIRMED")} className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition">
@@ -234,9 +251,11 @@ export default function ProviderDashboard() {
           )}
         </div>
       )}
+      
+      {/* Properly synced Modal implementation */}
       <AddServiceModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
         onSuccess={() => refreshDashboardData()}
         hasExistingService={dashboardData?.activeServices?.length > 0} 
       />
