@@ -101,7 +101,11 @@ export default function Navbar({
                   {/* Admin Menu */}
                   {isAdmin ? (
                     <>
-                      <button onClick={() => { setActivePage("admin"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition cursor-pointer">
+                      <button onClick={() => { setActivePage("view-profile"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer">
+                        <User size={18} /> View Profile
+                      </button>
+
+                      <button onClick={() => { setActivePage("admin"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition cursor-pointer border-t border-gray-100 dark:border-gray-700">
                         <Shield size={18} /> Admin Panel
                       </button>
                     </>
