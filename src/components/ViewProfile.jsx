@@ -6,8 +6,36 @@ export default function ViewProfile({ user, setActivePage }) {
 
   // Helper to render a beautiful, dynamic role badge
   const renderRoleBadge = () => {
-    const isAdmin = user.role === "ADMIN" || user.roles?.includes("ROLE_ADMIN");
-    const isProvider = user.role === "PROVIDER" || user.roles?.includes("ROLE_PROVIDER");
+    // 1. Safely extract all possible role formats from Spring Boot
+    let rolesArray = [];
+    if (typeof user.role === 'string') rolesArray.push(user.role.toUpperCase());
+    
+    if (Array.isArray(user.roles)) {
+      user.roles.forEach(r => {
+        if (typeof r === 'string') rolesArray.push(r.toUpperCase());
+        if (typeof r === 'object' && r !== null) {
+          if (r.name) rolesArray.push(String(r.name).toUpperCase());
+          if (r.authority) rolesArray.push(String(r.authority).toUpperCase());
+        }
+      });
+    }
+
+    if (Array.isArray(user.authorities)) {
+      user.authorities.forEach(auth => {
+        if (typeof auth === 'string') rolesArray.push(auth.toUpperCase());
+        if (typeof auth === 'object' && auth !== null && auth.authority) {
+           rolesArray.push(String(auth.authority).toUpperCase());
+        }
+      });
+    }
+
+    const isAdmin = rolesArray.includes("ADMIN") || rolesArray.includes("ROLE_ADMIN");
+    
+    // 2. THE BAND-AID FIX: Check roles array OR if the backend attached provider data
+    const isProvider = rolesArray.includes("PROVIDER") || 
+                       rolesArray.includes("ROLE_PROVIDER") || 
+                       user.providerProfile || 
+                       user.isProvider;
 
     if (isAdmin) {
       return (
@@ -16,6 +44,7 @@ export default function ViewProfile({ user, setActivePage }) {
         </span>
       );
     }
+    
     if (isProvider) {
       return (
         <span className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-sm font-bold tracking-wide">
@@ -23,6 +52,7 @@ export default function ViewProfile({ user, setActivePage }) {
         </span>
       );
     }
+    
     return (
       <span className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-bold tracking-wide">
         <UserCircle size={16} /> Standard User
@@ -39,7 +69,7 @@ export default function ViewProfile({ user, setActivePage }) {
         {setActivePage && (
           <button
             onClick={() => setActivePage("settings")}
-            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium transition-all shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium transition-all shadow-sm cursor-pointer"
           >
             <Edit3 size={18} />
             Edit Profile
