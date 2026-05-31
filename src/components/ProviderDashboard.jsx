@@ -1,26 +1,26 @@
 import React, { useState, useEffect } from "react";
 import { 
   Briefcase, DollarSign, Clock, CheckCircle, 
-  AlertCircle, MapPin, Calendar, User, Loader2, Plus 
+  AlertCircle, MapPin, Calendar, User, Loader2, Plus, TrendingUp, XCircle
 } from "lucide-react";
 import { ProviderAPI } from "../services/providerApi";
 import { BookingAPI } from "../services/bookingApi";
 import AddServiceModal from "./AddServiceModal";
 
 export default function ProviderDashboard() {
-  const [activeTab, setActiveTab] = useState("overview"); 
-  const [dashboardData, setDashboardData] = useState(null); // Unified name
+  // Navigation State
+  const [activeTab, setActiveTab] = useState("overview"); // 'overview', 'earnings', 'completed', 'requests'
+  
+  // Data State
+  const [dashboardData, setDashboardData] = useState(null);
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  const [completingJobId, setCompletingJobId] = useState(null);
-  const [otpCode, setOtpCode] = useState("");
-  
-  // Unified modal state
+  // Modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   useEffect(() => {
-    refreshDashboardData(); // Unified function name
+    refreshDashboardData();
   }, []);
 
   const refreshDashboardData = async () => {
@@ -40,34 +40,29 @@ export default function ProviderDashboard() {
     }
   };
 
-  const handleUpdateStatus = async (bookingId, newStatus) => {
+  // --- NEW BOOKING LIFECYCLE (ACCEPT, REJECT, COMPLETE) ---
+  const handleAction = async (bookingId, actionType) => {
     try {
-      await BookingAPI.updateStatus(bookingId, { status: newStatus });
-      setRequests(requests.map(req => req.id === bookingId ? { ...req, status: newStatus } : req));
+      if (actionType === "REJECTED") {
+        await BookingAPI.updateStatus(bookingId, { status: "REJECTED" });
+        // Remove the rejected request from UI immediately
+        setRequests(requests.filter(req => req.id !== bookingId));
+        alert("Service request rejected.");
+      } 
+      else if (actionType === "ACCEPTED") {
+        await BookingAPI.updateStatus(bookingId, { status: "ACCEPTED" });
+        // Update the card to show the "Mark as Complete" button
+        setRequests(requests.map(req => req.id === bookingId ? { ...req, status: "ACCEPTED" } : req));
+        alert("Service request accepted!");
+      }
+      else if (actionType === "COMPLETED") {
+        await BookingAPI.completeBooking(bookingId, { status: "COMPLETED" });
+        setRequests(requests.map(req => req.id === bookingId ? { ...req, status: "COMPLETED" } : req));
+        alert("Service marked as completed!");
+        refreshDashboardData(); // Refresh to update earnings & completed count
+      }
     } catch (error) {
-      alert("Failed to update booking status.");
-    }
-  };
-
-  const handleCompleteJob = async (bookingId) => {
-    if (!otpCode || otpCode.length < 4) {
-      alert("Please enter a valid OTP provided by the customer.");
-      return;
-    }
-    
-    try {
-      await BookingAPI.completeBooking(bookingId, { 
-        otp: otpCode,
-        beforeImage: "placeholder_url", 
-        afterImage: "placeholder_url" 
-      });
-      
-      setRequests(requests.map(req => req.id === bookingId ? { ...req, status: "COMPLETED" } : req));
-      setCompletingJobId(null);
-      setOtpCode("");
-      alert("Job marked as completed successfully!");
-    } catch (error) {
-      alert("Failed to complete job. Check the OTP and try again.");
+      alert(`Failed to update booking to ${actionType}. Please try again.`);
     }
   };
 
@@ -81,7 +76,7 @@ export default function ProviderDashboard() {
     );
   }
 
-  // SAFETY NET 2: Backend Crash / Empty Data Check (Prevents White Screen)
+  // SAFETY NET 2: Backend Crash / Empty Data Check
   if (!dashboardData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
@@ -102,157 +97,165 @@ export default function ProviderDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Provider Workspace</h1>
-        
-        {/* Navigation Tabs */}
-        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit">
-          <button 
-            onClick={() => setActiveTab("overview")}
-            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${activeTab === "overview" ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900"}`}
-          >
-            Overview
-          </button>
-
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-indigo-600 text-white px-4 py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition flex items-center gap-2 shadow-sm ml-1 mr-1"
-          >
-            <Plus size={18} /> New Service
-          </button>
-
-          <button 
-            onClick={() => setActiveTab("requests")}
-            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${activeTab === "requests" ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900"}`}
-          >
-            Job Requests
-            {requests.filter(r => r.status === "PENDING").length > 0 && (
-              <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                {requests.filter(r => r.status === "PENDING").length}
-              </span>
-            )}
-          </button>
-        </div>
+        <button 
+          onClick={() => setIsAddModalOpen(true)}
+          className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition flex items-center justify-center gap-2 shadow-sm"
+        >
+          <Plus size={18} /> New Service
+        </button>
       </div>
 
-      {/* --- TAB 1: OVERVIEW --- */}
-      {activeTab === "overview" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4">
-            <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center">
-              <DollarSign className="text-green-600 dark:text-green-400 w-7 h-7" />
+      {/* --- INTERACTIVE METRIC CARDS --- */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        
+        {/* Clickable Earnings Card */}
+        <div 
+          onClick={() => setActiveTab("earnings")}
+          className={`p-6 rounded-2xl border transition-all cursor-pointer dark:bg-gray-800 ${activeTab === "earnings" ? "border-indigo-500 shadow-md ring-2 ring-indigo-100 dark:ring-indigo-900" : "border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md bg-white"}`}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center text-green-600 dark:text-green-400">
+              <DollarSign size={28} />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Earnings</p>
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white">₹{dashboardData?.totalEarning || 0}</h3>
             </div>
           </div>
-          
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4">
-            <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center">
-              <CheckCircle className="text-blue-600 dark:text-blue-400 w-7 h-7" />
+        </div>
+        
+        {/* Clickable Completed Jobs Card */}
+        <div 
+          onClick={() => setActiveTab("completed")}
+          className={`p-6 rounded-2xl border transition-all cursor-pointer dark:bg-gray-800 ${activeTab === "completed" ? "border-indigo-500 shadow-md ring-2 ring-indigo-100 dark:ring-indigo-900" : "border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md bg-white"}`}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <CheckCircle size={28} />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Completed Jobs</p>
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData?.completedJobs || 0}</h3>
             </div>
           </div>
+        </div>
 
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4">
-            <div className="w-14 h-14 bg-yellow-100 dark:bg-yellow-900/30 rounded-2xl flex items-center justify-center">
-              <Clock className="text-yellow-600 dark:text-yellow-400 w-7 h-7" />
+        {/* Clickable Pending Requests Card */}
+        <div 
+          onClick={() => setActiveTab("requests")}
+          className={`p-6 rounded-2xl border transition-all cursor-pointer dark:bg-gray-800 ${activeTab === "requests" ? "border-indigo-500 shadow-md ring-2 ring-indigo-100 dark:ring-indigo-900" : "border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md bg-white"}`}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-yellow-100 dark:bg-yellow-900/30 rounded-2xl flex items-center justify-center text-yellow-600 dark:text-yellow-400">
+              <Clock size={28} />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Pending Requests</p>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData?.pendingRequest || 0}</h3>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{requests.filter(r => r.status === "PENDING").length}</h3>
             </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* --- DYNAMIC VIEWS BASED ON TAB SELECTION --- */}
+      
+      {/* 1. EARNINGS VIEW */}
+      {activeTab === "earnings" && (
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm animate-in fade-in">
+          <div className="flex items-center gap-3 mb-6">
+            <TrendingUp className="text-indigo-600 dark:text-indigo-400" />
+            <h2 className="text-xl font-bold dark:text-white">Earnings History</h2>
+          </div>
+          <div className="h-64 bg-gray-50 dark:bg-gray-900/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400">
+            [ Earnings Graph Placeholder ]
           </div>
         </div>
       )}
 
-      {/* --- TAB 2: JOB REQUESTS --- */}
-      {activeTab === "requests" && (
-        <div className="space-y-6">
-          {requests.length === 0 ? (
+      {/* 2. REQUESTS & COMPLETED VIEWS */}
+      {(activeTab === "requests" || activeTab === "completed" || activeTab === "overview") && (
+        <div className="space-y-6 animate-in fade-in">
+          <h2 className="text-xl font-bold dark:text-white">
+            {activeTab === "completed" ? "Job History" : "Active Service Requests"}
+          </h2>
+          
+          {requests.length === 0 || (activeTab === "completed" && requests.filter(r => r.status === "COMPLETED").length === 0) || (activeTab === "requests" && requests.filter(r => r.status !== "COMPLETED").length === 0) ? (
             <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
               <Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No jobs yet</h3>
-              <p className="text-gray-500">When customers book your services, they will appear here.</p>
+              <p className="text-gray-500">No requests to display in this category.</p>
             </div>
           ) : (
-            requests.map((job) => (
-              <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{job.serviceOffering?.name || "Service"}</h3>
-                      <p className="text-indigo-600 font-extrabold text-lg">₹{job.serviceOffering?.price || 0}</p>
-                    </div>
-                    <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wide
-                      ${job.status === "PENDING" ? "bg-yellow-100 text-yellow-800" : 
-                        job.status === "CONFIRMED" ? "bg-blue-100 text-blue-800" : 
-                        job.status === "COMPLETED" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
-                    >
-                      {job.status}
-                    </span>
+            requests
+              .filter(job => activeTab === "completed" ? job.status === "COMPLETED" : (activeTab === "requests" ? job.status !== "COMPLETED" : true))
+              .map((job) => (
+              <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">{job.serviceOffering?.name || "Service Requested"}</h3>
+                    <p className="text-indigo-600 font-extrabold text-lg">₹{job.serviceOffering?.price || 0}</p>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl mb-4">
-                    <p className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                      <Calendar className="w-4 h-4 text-gray-400" /> {new Date(job.scheduleTime).toLocaleString()}
-                    </p>
-                    <p className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                      <MapPin className="w-4 h-4 text-gray-400" /> {job.workLocation}
-                    </p>
-                    {job.customer && (
-                      <p className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 md:col-span-2">
-                        <User className="w-4 h-4 text-gray-400" /> Customer: {job.customer.firstName} {job.customer.lastName}
-                      </p>
-                    )}
-                  </div>
-
-                  {job.status === "PENDING" && (
-                    <div className="flex gap-3 mt-4">
-                      <button onClick={() => handleUpdateStatus(job.id, "CONFIRMED")} className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition">
-                        Accept Job
-                      </button>
-                      <button onClick={() => handleUpdateStatus(job.id, "CANCELLED")} className="flex-1 bg-red-50 text-red-600 py-2.5 rounded-lg font-bold hover:bg-red-100 transition">
-                        Decline
-                      </button>
-                    </div>
-                  )}
-
-                  {job.status === "CONFIRMED" && (
-                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                      {completingJobId === job.id ? (
-                        <div className="flex gap-2">
-                          <input 
-                            type="text" 
-                            placeholder="Enter Customer OTP" 
-                            value={otpCode}
-                            onChange={(e) => setOtpCode(e.target.value)}
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                          <button onClick={() => handleCompleteJob(job.id)} className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700">
-                            Submit
-                          </button>
-                          <button onClick={() => setCompletingJobId(null)} className="px-4 text-gray-500 hover:text-gray-700">Cancel</button>
-                        </div>
-                      ) : (
-                        <button onClick={() => setCompletingJobId(job.id)} className="w-full bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700 transition flex items-center justify-center gap-2">
-                          <CheckCircle className="w-5 h-5" /> Mark as Completed
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wide
+                    ${job.status === "PENDING" ? "bg-yellow-100 text-yellow-800" : 
+                      job.status === "ACCEPTED" ? "bg-blue-100 text-blue-800" : 
+                      job.status === "COMPLETED" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
+                  >
+                    {job.status}
+                  </span>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl mb-6">
+                  <p className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <Calendar className="w-4 h-4 text-gray-400" /> {new Date(job.scheduleTime).toLocaleString()}
+                  </p>
+                  <p className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <MapPin className="w-4 h-4 text-gray-400" /> {job.workLocation}
+                  </p>
+                  <p className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 md:col-span-2">
+                    <User className="w-4 h-4 text-gray-400" /> Customer: {job.customer?.firstName} {job.customer?.lastName}
+                  </p>
+                </div>
+
+                {/* --- THE NEW BOOKING LIFECYCLE BUTTONS --- */}
+                {job.status === "PENDING" && (
+                  <div className="flex gap-4 border-t border-gray-100 dark:border-gray-700 pt-4">
+                    <button 
+                      onClick={() => handleAction(job.id, "ACCEPTED")} 
+                      className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition"
+                    >
+                      Accept Service Request
+                    </button>
+                    <button 
+                      onClick={() => handleAction(job.id, "REJECTED")} 
+                      className="flex-1 bg-red-50 text-red-600 py-3 rounded-xl font-bold hover:bg-red-100 transition flex items-center justify-center gap-2"
+                    >
+                      <XCircle size={18} /> Reject
+                    </button>
+                  </div>
+                )}
+
+                {job.status === "ACCEPTED" && (
+                  <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+                    <button 
+                      onClick={() => handleAction(job.id, "COMPLETED")} 
+                      className="w-full bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition flex justify-center items-center gap-2 shadow-sm"
+                    >
+                      <CheckCircle size={20} /> Mark as Complete
+                    </button>
+                  </div>
+                )}
               </div>
             ))
           )}
         </div>
       )}
       
-      {/* Properly synced Modal implementation */}
+      {/* Add Service Modal */}
       <AddServiceModal 
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 

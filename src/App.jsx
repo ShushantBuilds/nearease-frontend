@@ -146,15 +146,32 @@ export default function App() {
   };
 
   const filteredListings = listings.filter((item) => {
+    // 1. Search Filter
     const itemName = item?.name || item?.serviceType?.name || ""; 
     const matchesSearch = itemName.toLowerCase().includes(search.toLowerCase());
 
-    const matchesCategory = activeMainCategory === "All" || 
-                            item?.serviceType?.category?.name === activeMainCategory || 
-                            item?.category === activeMainCategory;
-    
+    // 2. Location Filter
     const itemLoc = item?.location || item?.provider?.address || "";
     const matchesLoc = itemLoc ? itemLoc.toLowerCase().includes(location.toLowerCase()) : true;
+    
+    // 3. Category & Subcategory Filter (THE FIX)
+    let matchesCategory = true;
+    
+    if (activeMainCategory !== "All") {
+      const itemMainCat = item?.serviceType?.category?.name?.toLowerCase() || item?.category?.toLowerCase() || "";
+      const targetMainCat = activeMainCategory.toLowerCase();
+      
+      const itemSubCat = item?.serviceType?.name?.toLowerCase() || "";
+      const targetSubCat = activeSubCategory ? activeSubCategory.name.toLowerCase() : null;
+
+      if (targetSubCat) {
+        // If they clicked a subcategory (like "Local Restaurants"), strictly match it
+        matchesCategory = (itemSubCat === targetSubCat);
+      } else {
+        // If they only clicked a main category (like "Semi-Luxurious"), match the main category
+        matchesCategory = (itemMainCat === targetMainCat);
+      }
+    }
     
     return matchesSearch && matchesLoc && matchesCategory;
   });
