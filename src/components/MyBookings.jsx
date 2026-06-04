@@ -10,6 +10,12 @@ export default function MyBookings() {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedBookingForReview, setSelectedBookingForReview] = useState(null);
 
+  // --- CANCELLATION OTP STATE ---
+  const [cancellingBookingId, setCancellingBookingId] = useState(null);
+  const [cancelOtp, setCancelOtp] = useState("");
+  const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+  const [cancelMessage, setCancelMessage] = useState("");
+
   useEffect(() => {
     const fetchBookings = async () => {
       try {
@@ -24,15 +30,43 @@ export default function MyBookings() {
     fetchBookings();
   }, []);
 
-  const handleCancelRequest = async (bookingId) => {
+  // STEP 1: Request the Cancellation (Triggers OTP Email)
+  const handleInitiateCancel = async (bookingId) => {
     if (!window.confirm("Are you sure you want to cancel this booking?")) return;
     try {
       await BookingAPI.requestCancel(bookingId);
-      // THE FIX: Update local state using 'bookingStatus'
-      setBookings(bookings.map(b => b.id === bookingId ? { ...b, bookingStatus: "CANCELLED" } : b));
-      alert("Booking cancelled successfully.");
+      // If successful, open the OTP modal
+      setCancellingBookingId(bookingId);
     } catch (err) {
-      alert("Failed to cancel booking.");
+      // THE FIX: Display the exact error message from the Spring Boot backend
+      alert(err.message || "Failed to initiate cancellation.");
+    }
+  };
+
+  // STEP 2: Confirm the Cancellation with OTP
+  const handleConfirmCancel = async () => {
+    if (!cancelOtp || cancelOtp.length < 4) return alert("Please enter a valid OTP.");
+    setIsSubmittingCancel(true);
+    
+    try {
+      await BookingAPI.confirmCancel(cancellingBookingId, cancelOtp);
+      
+      setCancelMessage("Booking successfully cancelled.");
+      
+      // Permanently update the local UI state now that the database is updated
+      setBookings(bookings.map(b => b.id === cancellingBookingId ? { ...b, bookingStatus: "CANCELLED" } : b));
+      
+      setTimeout(() => {
+        setCancellingBookingId(null);
+        setCancelOtp("");
+        setCancelMessage("");
+      }, 2000);
+      
+    } catch (err) {
+      // THE FIX: Display the exact error message from the backend
+      alert(err.message || "Invalid OTP. Please try again.");
+    } finally {
+      setIsSubmittingCancel(false);
     }
   };
 
@@ -72,7 +106,7 @@ export default function MyBookings() {
   if (error) return <div className="text-center mt-20 text-red-500 font-bold">{error}</div>;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8 relative">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">My Bookings</h1>
 
       {bookings.length === 0 ? (
@@ -85,7 +119,7 @@ export default function MyBookings() {
           {bookings.map((booking) => (
             <div key={booking.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all hover:shadow-md">
               
-              {/* THE FIX: Changed booking.status to booking.bookingStatus */}
+              {/* STATUS BANNERS */}
               {booking.bookingStatus === "PENDING" && (
                 <div className="bg-yellow-50 text-yellow-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-yellow-100">
                   <Clock size={16} /> Request sent. Waiting for provider approval.
@@ -115,13 +149,11 @@ export default function MyBookings() {
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    {/* THE FIX: Changed serviceOffering?.name to ServiceName */}
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">{booking.ServiceName || "Service Booking"}</h3>
                     <p className="text-sm text-gray-500 font-mono mt-1">Booking ID: #{booking.id}</p>
                   </div>
                   <div className="text-right">
                      <p className="text-sm text-gray-500 font-medium mb-1">Total Price</p>
-                     {/* THE FIX: Using booking.price to match the DTO */}
                      <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">₹{booking.price || 0}</p>
                   </div>
                 </div>
@@ -129,7 +161,6 @@ export default function MyBookings() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700 mb-4">
                   <p className="text-gray-600 dark:text-gray-300 flex items-start gap-2">
                     <Calendar className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                    {/* THE FIX: Changed scheduleTime to scheduledTime to fix "Invalid Date" */}
                     <span><span className="block font-semibold text-gray-900 dark:text-gray-100">Scheduled Time</span>{new Date(booking.scheduledTime).toLocaleString()}</span>
                   </p>
                   <p className="text-gray-600 dark:text-gray-300 flex items-start gap-2">
@@ -137,7 +168,6 @@ export default function MyBookings() {
                     <span><span className="block font-semibold text-gray-900 dark:text-gray-100">Location</span>{booking.workLocation}</span>
                   </p>
                   
-                  {/* THE FIX: Safely mapping CostumerRequest (with capital C and 'o') */}
                   {(booking.CostumerRequest || booking.customerRequest) && (
                     <p className="text-gray-600 dark:text-gray-300 flex items-start gap-2 md:col-span-2">
                       <FileText className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
@@ -149,7 +179,10 @@ export default function MyBookings() {
                 {/* Actions Footer */}
                 <div className="flex justify-end gap-3 pt-2">
                   {(booking.bookingStatus === "PENDING" || booking.bookingStatus === "CONFIRMED") && (
-                    <button onClick={() => handleCancelRequest(booking.id)} className="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors">
+                    <button 
+                      onClick={() => handleInitiateCancel(booking.id)} 
+                      className="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors"
+                    >
                       Cancel Booking
                     </button>
                   )}
@@ -176,7 +209,55 @@ export default function MyBookings() {
           ))}
         </div>
       )}
-      
+
+      {/* --- CANCELLATION OTP MODAL (GLASSMORPHISM) --- */}
+      {cancellingBookingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">
+            
+            {/* Background glowing orb for glass effect */}
+            <div className="absolute -top-20 -left-20 w-40 h-40 bg-red-500 rounded-full blur-3xl opacity-20"></div>
+
+            {cancelMessage ? (
+              <div className="py-6 animate-in zoom-in">
+                <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/30">
+                  <CheckCircle className="text-white w-10 h-10" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{cancelMessage}</h3>
+              </div>
+            ) : (
+              <>
+                <button onClick={() => setCancellingBookingId(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-white z-10">
+                  <XCircle size={24} />
+                </button>
+                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="text-red-600 dark:text-red-400 w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Confirm Cancellation</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Please enter the 4-digit OTP sent to your email to safely cancel this booking.</p>
+                
+                <input 
+                  type="text" 
+                  placeholder="Enter OTP" 
+                  value={cancelOtp}
+                  onChange={(e) => setCancelOtp(e.target.value)}
+                  className="w-full px-4 py-4 text-center text-2xl tracking-[0.5em] font-bold border-2 border-white/50 bg-white/50 dark:bg-gray-800/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent mb-6 shadow-inner"
+                  maxLength={6}
+                />
+                
+                <button 
+                  onClick={handleConfirmCancel}
+                  disabled={isSubmittingCancel}
+                  className="w-full bg-red-600 text-white py-3.5 rounded-xl font-bold hover:bg-red-700 transition shadow-lg flex justify-center items-center"
+                >
+                  {isSubmittingCancel ? <Loader2 className="animate-spin w-5 h-5" /> : "Verify & Cancel"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <ReviewModal 
         isOpen={reviewModalOpen} 
         onClose={() => setReviewModalOpen(false)} 
