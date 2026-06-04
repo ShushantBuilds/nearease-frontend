@@ -15,7 +15,7 @@ const getAuthToken = () => {
   return null;
 };
 
-// 1. Standard headers for JSON requests (FIXED: Now securely attaches the token!)
+// Standard headers for JSON requests
 const getHeaders = () => {
   const headers = { "Content-Type": "application/json" };
   const token = getAuthToken(); 
@@ -25,7 +25,7 @@ const getHeaders = () => {
   return headers;
 };
 
-// 2. Helper to handle responses safely and throw actual errors
+// Helper to handle responses safely and throw actual errors
 const fetchWithAuth = async (url, options = {}) => {
   const res = await fetch(url, options);
   
@@ -65,25 +65,30 @@ export const BookingAPI = {
     return fetchWithAuth(`${BASE_URL}/bookService`, {
       method: "POST",
       headers: getHeaders(),
-      body: JSON.stringify(bookingData), // { serviceOfferingId, scheduleTime, workLocation, customerRequest }
+      body: JSON.stringify(bookingData), 
     });
   },
 
-  // Update booking status
+  // --- FIX 1: Send status as a URL Query Parameter, NOT JSON Body ---
   updateStatus: async (bookingId, statusData) => {
-    return fetchWithAuth(`${BASE_URL}/${bookingId}/status`, {
+    return fetchWithAuth(`${BASE_URL}/${bookingId}/status?status=${statusData.status}`, {
       method: "PUT",
       headers: getHeaders(),
-      body: JSON.stringify(statusData),
+      // We removed the JSON body because the backend reads from the URL
     });
   },
 
-  // Complete a booking (Provider submits before/after images & OTP)
-  completeBooking: async (bookingId, completionData) => {
+  // --- FIX 2: Handle FormData correctly without application/json headers ---
+  completeBooking: async (bookingId, formData) => {
+    const token = getAuthToken();
     return fetchWithAuth(`${BASE_URL}/${bookingId}/complete`, {
       method: "PUT",
-      headers: getHeaders(),
-      body: JSON.stringify(completionData), // { otp, beforeImage, afterImage }
+      headers: { 
+        // Notice we do NOT include "Content-Type": "application/json" here
+        // The browser will automatically set the correct multipart/form-data boundary
+        "Authorization": token ? `Bearer ${token}` : "" 
+      },
+      body: formData, // Pass FormData directly, DO NOT JSON.stringify it!
     });
   },
 
@@ -103,8 +108,9 @@ export const BookingAPI = {
     });
   },
   
-  confirmCancel: async (bookingId) => {
-    return fetchWithAuth(`${BASE_URL}/${bookingId}/cancel/confirm`, { 
+  // --- FIX 3: Added the missing OTP parameter to match backend ---
+  confirmCancel: async (bookingId, otp) => {
+    return fetchWithAuth(`${BASE_URL}/${bookingId}/cancel/confirm?otp=${otp}`, { 
       method: "POST", 
       headers: getHeaders() 
     });
