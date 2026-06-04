@@ -30,20 +30,16 @@ export default function MyBookings() {
     fetchBookings();
   }, []);
 
-  // STEP 1: Request the Cancellation (Triggers OTP Email)
   const handleInitiateCancel = async (bookingId) => {
     if (!window.confirm("Are you sure you want to cancel this booking?")) return;
     try {
       await BookingAPI.requestCancel(bookingId);
-      // If successful, open the OTP modal
       setCancellingBookingId(bookingId);
     } catch (err) {
-      // THE FIX: Display the exact error message from the Spring Boot backend
       alert(err.message || "Failed to initiate cancellation.");
     }
   };
 
-  // STEP 2: Confirm the Cancellation with OTP
   const handleConfirmCancel = async () => {
     if (!cancelOtp || cancelOtp.length < 4) return alert("Please enter a valid OTP.");
     setIsSubmittingCancel(true);
@@ -53,7 +49,6 @@ export default function MyBookings() {
       
       setCancelMessage("Booking successfully cancelled.");
       
-      // Permanently update the local UI state now that the database is updated
       setBookings(bookings.map(b => b.id === cancellingBookingId ? { ...b, bookingStatus: "CANCELLED" } : b));
       
       setTimeout(() => {
@@ -63,7 +58,6 @@ export default function MyBookings() {
       }, 2000);
       
     } catch (err) {
-      // THE FIX: Display the exact error message from the backend
       alert(err.message || "Invalid OTP. Please try again.");
     } finally {
       setIsSubmittingCancel(false);
@@ -116,97 +110,111 @@ export default function MyBookings() {
         </div>
       ) : (
         <div className="space-y-6">
-          {bookings.map((booking) => (
-            <div key={booking.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all hover:shadow-md">
-              
-              {/* STATUS BANNERS */}
-              {booking.bookingStatus === "PENDING" && (
-                <div className="bg-yellow-50 text-yellow-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-yellow-100">
-                  <Clock size={16} /> Request sent. Waiting for provider approval.
-                </div>
-              )}
-              {booking.bookingStatus === "CONFIRMED" && (
-                <div className="bg-blue-50 text-blue-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-blue-100">
-                  <CheckCircle size={16} /> Your service request has been accepted!
-                </div>
-              )}
-              {booking.bookingStatus === "COMPLETED" && (
-                <div className="bg-green-50 text-green-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-green-100">
-                  <CheckCircle size={16} /> The service has been completed.
-                </div>
-              )}
-              {booking.bookingStatus === "REJECTED" && (
-                <div className="bg-red-50 text-red-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-red-100">
-                  <XCircle size={16} /> Your request has been rejected by the provider.
-                </div>
-              )}
-              {booking.bookingStatus === "CANCELLED" && (
-                <div className="bg-gray-100 text-gray-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-gray-200">
-                  <AlertCircle size={16} /> This booking was cancelled.
-                </div>
-              )}
+          {bookings.map((booking) => {
+            // THE FIX: Check if the booking time is in the past
+            const isPast = new Date(booking.scheduledTime) < new Date();
 
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">{booking.ServiceName || "Service Booking"}</h3>
-                    <p className="text-sm text-gray-500 font-mono mt-1">Booking ID: #{booking.id}</p>
+            return (
+              <div key={booking.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all hover:shadow-md">
+                
+                {/* --- SMART STATUS BANNERS --- */}
+                {booking.bookingStatus === "PENDING" && !isPast && (
+                  <div className="bg-yellow-50 text-yellow-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-yellow-100">
+                    <Clock size={16} /> Request sent. Waiting for provider approval.
                   </div>
-                  <div className="text-right">
-                     <p className="text-sm text-gray-500 font-medium mb-1">Total Price</p>
-                     <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">₹{booking.price || 0}</p>
+                )}
+                
+                {/* THE FIX: Show an Expired banner if it's pending but the time has passed */}
+                {booking.bookingStatus === "PENDING" && isPast && (
+                  <div className="bg-gray-100 text-gray-600 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-gray-200">
+                    <AlertCircle size={16} /> Request Expired. The scheduled time has passed without provider approval.
                   </div>
-                </div>
+                )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700 mb-4">
-                  <p className="text-gray-600 dark:text-gray-300 flex items-start gap-2">
-                    <Calendar className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                    <span><span className="block font-semibold text-gray-900 dark:text-gray-100">Scheduled Time</span>{new Date(booking.scheduledTime).toLocaleString()}</span>
-                  </p>
-                  <p className="text-gray-600 dark:text-gray-300 flex items-start gap-2">
-                    <MapPin className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                    <span><span className="block font-semibold text-gray-900 dark:text-gray-100">Location</span>{booking.workLocation}</span>
-                  </p>
-                  
-                  {(booking.CostumerRequest || booking.customerRequest) && (
-                    <p className="text-gray-600 dark:text-gray-300 flex items-start gap-2 md:col-span-2">
-                      <FileText className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                      <span><span className="block font-semibold text-gray-900 dark:text-gray-100">Your Note</span>{booking.CostumerRequest || booking.customerRequest}</span>
+                {booking.bookingStatus === "CONFIRMED" && (
+                  <div className="bg-blue-50 text-blue-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-blue-100">
+                    <CheckCircle size={16} /> Your service request has been accepted!
+                  </div>
+                )}
+                {booking.bookingStatus === "COMPLETED" && (
+                  <div className="bg-green-50 text-green-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-green-100">
+                    <CheckCircle size={16} /> The service has been completed.
+                  </div>
+                )}
+                {booking.bookingStatus === "REJECTED" && (
+                  <div className="bg-red-50 text-red-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-red-100">
+                    <XCircle size={16} /> Your request has been rejected by the provider.
+                  </div>
+                )}
+                {booking.bookingStatus === "CANCELLED" && (
+                  <div className="bg-gray-100 text-gray-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-gray-200">
+                    <AlertCircle size={16} /> This booking was cancelled.
+                  </div>
+                )}
+
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{booking.ServiceName || "Service Booking"}</h3>
+                      <p className="text-sm text-gray-500 font-mono mt-1">Booking ID: #{booking.id}</p>
+                    </div>
+                    <div className="text-right">
+                       <p className="text-sm text-gray-500 font-medium mb-1">Total Price</p>
+                       <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">₹{booking.price || 0}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700 mb-4">
+                    <p className="text-gray-600 dark:text-gray-300 flex items-start gap-2">
+                      <Calendar className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                      <span><span className="block font-semibold text-gray-900 dark:text-gray-100">Scheduled Time</span>{new Date(booking.scheduledTime).toLocaleString()}</span>
                     </p>
-                  )}
-                </div>
+                    <p className="text-gray-600 dark:text-gray-300 flex items-start gap-2">
+                      <MapPin className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                      <span><span className="block font-semibold text-gray-900 dark:text-gray-100">Location</span>{booking.workLocation}</span>
+                    </p>
+                    
+                    {(booking.CostumerRequest || booking.customerRequest) && (
+                      <p className="text-gray-600 dark:text-gray-300 flex items-start gap-2 md:col-span-2">
+                        <FileText className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                        <span><span className="block font-semibold text-gray-900 dark:text-gray-100">Your Note</span>{booking.CostumerRequest || booking.customerRequest}</span>
+                      </p>
+                    )}
+                  </div>
 
-                {/* Actions Footer */}
-                <div className="flex justify-end gap-3 pt-2">
-                  {(booking.bookingStatus === "PENDING" || booking.bookingStatus === "CONFIRMED") && (
-                    <button 
-                      onClick={() => handleInitiateCancel(booking.id)} 
-                      className="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors"
-                    >
-                      Cancel Booking
-                    </button>
-                  )}
-                  
-                  {booking.bookingStatus === "COMPLETED" && (
-                    <>
-                      <button onClick={() => printBill(booking)} className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2">
-                        <Printer size={18} /> Print Bill
+                  {/* Actions Footer */}
+                  <div className="flex justify-end gap-3 pt-2">
+                    {/* THE FIX: Only allow cancellation if the booking is active AND the date is NOT in the past */}
+                    {(booking.bookingStatus === "PENDING" || booking.bookingStatus === "CONFIRMED") && !isPast && (
+                      <button 
+                        onClick={() => handleInitiateCancel(booking.id)} 
+                        className="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors"
+                      >
+                        Cancel Booking
                       </button>
-                      
-                      {!booking.hasReviewed && (
-                        <button 
-                          onClick={() => { setSelectedBookingForReview(booking); setReviewModalOpen(true); }}
-                          className="bg-green-100 text-green-700 hover:bg-green-200 px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
-                        >
-                          <Star size={18} className="fill-green-700" /> Leave Review
+                    )}
+                    
+                    {booking.bookingStatus === "COMPLETED" && (
+                      <>
+                        <button onClick={() => printBill(booking)} className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2">
+                          <Printer size={18} /> Print Bill
                         </button>
-                      )}
-                    </>
-                  )}
+                        
+                        {!booking.hasReviewed && (
+                          <button 
+                            onClick={() => { setSelectedBookingForReview(booking); setReviewModalOpen(true); }}
+                            className="bg-green-100 text-green-700 hover:bg-green-200 px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                          >
+                            <Star size={18} className="fill-green-700" /> Leave Review
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -215,7 +223,6 @@ export default function MyBookings() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">
             
-            {/* Background glowing orb for glass effect */}
             <div className="absolute -top-20 -left-20 w-40 h-40 bg-red-500 rounded-full blur-3xl opacity-20"></div>
 
             {cancelMessage ? (
