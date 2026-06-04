@@ -1,123 +1,141 @@
-import React, { useState, useEffect } from "react";
-import { ArrowLeft, User, MapPin, Clock, CalendarDays, ShieldCheck } from "lucide-react";
+import React, { useState } from "react";
+import { ArrowLeft, MapPin, Calendar, FileText, CheckCircle, Loader2 } from "lucide-react";
+import { BookingAPI } from "../services/bookingApi"; // Ensure this path is correct
 
-export default function CheckoutPage({ service, onBack, onProceedToGateway }) {
+export default function CheckoutPage({ service, onBack, onComplete }) {
   const [formData, setFormData] = useState({
-    firstName: "", lastName: "", phone: "", email: "",
-    street: "", apt: "", city: "", state: "", zip: "",
-    bookingDate: "", bookingTime: ""
+    scheduleTime: "",
+    workLocation: "",
+    customerRequest: "",
+    city: "Default City", // Update these based on your actual form needs
+    state: "Default State",
+    pinCode: "000000"
   });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successData, setSuccessData] = useState(null);
+  const [error, setError] = useState("");
 
-  const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError("");
 
-  const serviceFee = 50.00; // Example platform fee
-  const grandTotal = (service?.price || 0) + serviceFee; 
+    try {
+      // Mapping to your BookingRequestDto structure
+      const bookingPayload = {
+        serviceOfferingId: service.id,
+        scheduleTime: new Date(formData.scheduleTime).toISOString(),
+        workLocation: formData.workLocation,
+        customerRequest: formData.customerRequest,
+        city: formData.city,
+        state: formData.state,
+        pinCode: parseInt(formData.pinCode)
+      };
 
-  useEffect(() => { window.scrollTo(0, 0); }, []);
-
-  const handleProceed = () => {
-    // Basic validation
-    if (!formData.bookingDate || !formData.bookingTime || !formData.street || !formData.firstName) {
-      alert("Please fill in your name, address, and select a date/time.");
-      return;
+      const response = await BookingAPI.bookService(bookingPayload);
+      
+      // Show the success screen with the returned Booking ID
+      setSuccessData({ bookingId: response.id || Math.floor(Math.random() * 10000) });
+    } catch (err) {
+      setError("Failed to send service request. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-    // Proceed to Gateway
-    onProceedToGateway(formData);
   };
 
-  if (!service) return null;
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-in fade-in duration-500">
-      <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 font-medium mb-10 transition cursor-pointer">
-        <ArrowLeft size={20} /> Back to Details
-      </button>
-      
-      <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-10">Secure Checkout</h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr,1fr] gap-12 items-start">
-        
-        {/* Left Column: Data Entry */}
-        <div className="space-y-8">
-          
-          {/* SECTION 1: Date and Time (FIXED UX) */}
-          <div className="bg-white dark:bg-gray-800 p-8 md:p-10 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
-            <h3 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white mb-6">
-              <Clock size={22} className="text-indigo-600" /> 1. Schedule Appointment
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1.5 ml-1 font-medium">Select Date</label>
-                <input 
-                  type="date" name="bookingDate" value={formData.bookingDate} onChange={handleInputChange} 
-                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white cursor-pointer focus:border-indigo-500 transition" 
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1.5 ml-1 font-medium">Select Time</label>
-                <input 
-                  type="time" name="bookingTime" value={formData.bookingTime} onChange={handleInputChange} 
-                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white cursor-pointer focus:border-indigo-500 transition" 
-                />
-              </div>
-            </div>
+  // --- SUCCESS SCREEN ---
+  if (successData) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-2xl max-w-md w-full text-center border border-gray-100 dark:border-gray-700 animate-in zoom-in-95 duration-500">
+          <div className="w-24 h-24 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <CheckCircle className="text-green-500 w-12 h-12" />
           </div>
-
-          {/* SECTION 2: Address & Details */}
-          <div className="bg-white dark:bg-gray-800 p-8 md:p-10 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-8">
-            <div>
-              <h3 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white mb-6">
-                <User size={22} className="text-indigo-600" /> 2. Personal Details
-              </h3>
-              <div className="grid grid-cols-2 gap-5">
-                <input name="firstName" placeholder="First Name" onChange={handleInputChange} className="col-span-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
-                <input name="lastName" placeholder="Last Name" onChange={handleInputChange} className="col-span-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
-                <input name="phone" type="tel" placeholder="Phone Number" onChange={handleInputChange} className="col-span-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
-                <input name="email" type="email" placeholder="Email Address" onChange={handleInputChange} className="col-span-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white mb-6">
-                <MapPin size={22} className="text-indigo-600" /> 3. Service Location
-              </h3>
-              <div className="grid grid-cols-2 gap-5">
-                <input name="street" placeholder="Street Address" onChange={handleInputChange} className="col-span-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
-                <input name="city" placeholder="City" onChange={handleInputChange} className="col-span-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
-                <input name="zip" placeholder="ZIP / Postal Code" onChange={handleInputChange} className="col-span-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-xl outline-none text-sm dark:text-white" />
-              </div>
-            </div>
+          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-2">Request Sent Successfully!</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+            Your service request has been sent to the provider. You will be notified in your Bookings tab once they accept the job.
+          </p>
+          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 mb-8 border border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-1">Your Booking ID</p>
+            <p className="text-xl font-mono font-bold text-indigo-600 dark:text-indigo-400">#{successData.bookingId}</p>
           </div>
-        </div>
-
-        {/* Right Column: Order Summary & Make Payment */}
-        <div className="lg:sticky lg:top-28 space-y-6">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Order Summary</h3>
-            <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
-                <img src={service.imageUrl || (service.images && service.images[0]) || "https://via.placeholder.com/100"} alt="Service" className="w-16 h-16 rounded-xl object-cover shrink-0" />
-                <div>
-                    <p className="font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1">{service.name || service.serviceType?.name}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">₹{service.price || 0}</p>
-                </div>
-            </div>
-            
-            <div className="space-y-3 font-medium text-sm text-gray-700 dark:text-gray-300 pt-4 border-t border-gray-100 dark:border-gray-700">
-              <div className="flex justify-between items-center"><p>Service Cost</p><p>₹{service.price || 0}</p></div>
-              <div className="flex justify-between items-center"><p>Platform Fee</p><p>₹{serviceFee}</p></div>
-              <div className="flex justify-between items-center text-xl font-black text-gray-900 dark:text-white pt-3 border-t border-gray-100 dark:border-gray-700">
-                <p>Total</p><p>₹{grandTotal}</p>
-              </div>
-            </div>
-          </div>
-
           <button 
-            onClick={handleProceed}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-2xl transition shadow-xl text-lg flex justify-center items-center gap-3 transform hover:-translate-y-1 cursor-pointer"
+            onClick={onComplete} // Should trigger setActivePage("bookings") in App.jsx
+            className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md"
           >
-            <ShieldCheck size={24} /> Make Payment
+            View My Bookings
           </button>
         </div>
+      </div>
+    );
+  }
+
+  // --- CHECKOUT FORM ---
+  return (
+    <div className="max-w-3xl mx-auto px-4 py-8 animate-in fade-in">
+      <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition mb-6 font-medium">
+        <ArrowLeft size={20} /> Back to Service
+      </button>
+
+      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div className="bg-indigo-600 p-6 text-white">
+          <h1 className="text-2xl font-bold">Complete Your Request</h1>
+          <p className="text-indigo-100 mt-1">{service?.name}</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
+          {error && <div className="bg-red-50 text-red-600 p-4 rounded-xl font-medium border border-red-100">{error}</div>}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                <Calendar size={18} className="text-indigo-500" /> Scheduled Date & Time
+              </label>
+              <input 
+                type="datetime-local" required
+                className="w-full p-3.5 border rounded-xl bg-gray-50 dark:bg-gray-900/50 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+                onChange={(e) => setFormData({...formData, scheduleTime: e.target.value})}
+              />
+            </div>
+            
+            <div>
+              <label className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                <MapPin size={18} className="text-indigo-500" /> Full Address
+              </label>
+              <input 
+                type="text" required placeholder="House No, Street, Landmark..."
+                className="w-full p-3.5 border rounded-xl bg-gray-50 dark:bg-gray-900/50 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+                onChange={(e) => setFormData({...formData, workLocation: e.target.value})}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+              <FileText size={18} className="text-indigo-500" /> Customer's Note (Optional)
+            </label>
+            <textarea 
+              rows="3" placeholder="Any specific instructions for the provider?"
+              className="w-full p-3.5 border rounded-xl bg-gray-50 dark:bg-gray-900/50 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+              onChange={(e) => setFormData({...formData, customerRequest: e.target.value})}
+            />
+          </div>
+
+          <div className="border-t border-gray-100 dark:border-gray-700 pt-6 mt-6">
+            <div className="flex justify-between items-center mb-6">
+              <span className="text-gray-500 font-medium">Estimated Cost</span>
+              <span className="text-2xl font-black text-gray-900 dark:text-white">₹{service?.price || 0}</span>
+            </div>
+            <button 
+              type="submit" disabled={isSubmitting}
+              className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700 transition flex justify-center items-center gap-2 text-lg shadow-lg"
+            >
+              {isSubmitting ? <Loader2 className="animate-spin w-6 h-6" /> : "Confirm Booking Request"}
+            </button>
+            <p className="text-center text-xs text-gray-400 mt-4">Payment will be collected only after the service is completed.</p>
+          </div>
+        </form>
       </div>
     </div>
   );
