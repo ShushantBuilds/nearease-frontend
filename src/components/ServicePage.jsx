@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Star, MapPin, ShoppingCart, ArrowLeft, Send, Phone, MessageCircle, Flashlight } from "lucide-react";
+import { Star, MapPin, ArrowLeft, Send, Phone, MessageCircle, Flashlight } from "lucide-react";
 import PortfolioGallery from "./PortfolioGallery";
 
 export default function ServicePage({ service, onBack, onProceedToCheckout }) {
   const [previewImage, setPreviewImage] = useState(0);
   const [reviewText, setReviewText] = useState("");
-  const [isAddedToCart, setIsAddedToCart] = useState(false);
 
   // Safely extract images whether they come as a single string or an array from Spring Boot
   const images = service?.images?.length > 0 
@@ -13,12 +12,6 @@ export default function ServicePage({ service, onBack, onProceedToCheckout }) {
     : (service?.imageUrl ? [service.imageUrl] : ["https://via.placeholder.com/800x400?text=No+Image"]);
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
-
-  const handleAddToCart = () => {
-    setIsAddedToCart(true);
-    // In the future, you will dispatch this to a Cart Context or Redux store
-    setTimeout(() => setIsAddedToCart(false), 3000); 
-  };
 
   const submitReview = () => {
     if(!reviewText) return alert("Please write a review first.");
@@ -89,15 +82,7 @@ export default function ServicePage({ service, onBack, onProceedToCheckout }) {
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-auto pt-6 border-t border-gray-100 dark:border-gray-800 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button 
-              onClick={handleAddToCart} 
-              disabled={isAddedToCart}
-              className={`w-full py-4 rounded-2xl font-bold transition shadow-sm text-lg flex justify-center items-center gap-3 cursor-pointer ${isAddedToCart ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white dark:bg-gray-800 border-2 border-indigo-100 dark:border-gray-700 text-indigo-600 dark:text-indigo-400 hover:border-indigo-600'}`}
-            >
-              <ShoppingCart size={20} /> {isAddedToCart ? "Added to Cart!" : "Add to Cart"}
-            </button>
-            
+          <div className="mt-auto pt-6 border-t border-gray-100 dark:border-gray-800">
             <button 
               onClick={() => onProceedToCheckout(service)} 
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition shadow-xl text-lg flex justify-center items-center gap-3 transform hover:-translate-y-1 cursor-pointer"
