@@ -70,17 +70,12 @@ export default function ProviderDashboard() {
     setIsSubmittingOtp(true);
     
     try {
-      const formData = new FormData();
-      formData.append("otp", otpCode);
-      
-      await BookingAPI.completeBooking(completingJobId, formData);
+      // THE FIX: Directly pass the otpCode string to match the updated API
+      await BookingAPI.completeBooking(completingJobId, otpCode);
       
       setCompletionMessage("The Service has been completed.");
-      
-      // THE FIX: Optimistically update the UI instantly so the card moves to the Completed tab
       setRequests(requests.map(req => req.id === completingJobId ? { ...req, bookingStatus: "COMPLETED" } : req));
       
-      // THE FIX: Wait for the modal to close BEFORE fetching fresh data to avoid the race condition
       setTimeout(() => {
         setCompletingJobId(null);
         setOtpCode("");
@@ -95,9 +90,9 @@ export default function ProviderDashboard() {
     }
   };
 
-  // Soft Delete Handler
+  // --- DELETE LOGIC ---
   const handleDeleteCard = (id) => {
-    if(window.confirm("Remove this request from your view?")) {
+    if(window.confirm("Are you sure you want to delete this booking from your dashboard?")) {
       const updated = [...hiddenIds, id];
       setHiddenIds(updated);
       localStorage.setItem("hiddenProviderBookings", JSON.stringify(updated));
@@ -170,13 +165,13 @@ export default function ProviderDashboard() {
             visibleRequests
               .filter(job => activeTab === "completed" ? job.bookingStatus === "COMPLETED" : job.bookingStatus !== "COMPLETED")
               .map((job) => (
-              <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 shadow-sm p-6 relative group">
+              <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 shadow-sm p-6 relative">
                 
-                {/* NEW: Soft Delete Icon */}
+                {/* --- PERMANENT DELETE ICON --- */}
                 <button 
                   onClick={() => handleDeleteCard(job.id)} 
-                  className="absolute top-6 right-6 text-gray-300 hover:text-red-500 transition-colors p-2 bg-gray-50 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100"
-                  title="Remove from view"
+                  className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors p-2 bg-red-50 hover:bg-red-100 rounded-full shadow-sm"
+                  title="Delete from dashboard"
                 >
                   <Trash2 size={18} />
                 </button>
@@ -234,7 +229,6 @@ export default function ProviderDashboard() {
       {completingJobId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">
-            
             <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500 rounded-full blur-3xl opacity-20"></div>
 
             {completionMessage ? (
@@ -246,29 +240,15 @@ export default function ProviderDashboard() {
               </div>
             ) : (
               <>
-                <button onClick={() => setCompletingJobId(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-white z-10">
-                  <XCircle size={24} />
-                </button>
-                <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="text-indigo-600 dark:text-indigo-400 w-8 h-8" />
-                </div>
+                <button onClick={() => setCompletingJobId(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-white z-10"><XCircle size={24} /></button>
+                <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle className="text-indigo-600 dark:text-indigo-400 w-8 h-8" /></div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Complete Service</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">An OTP has been sent to the customer's email. Ask them for the 4-digit code to mark this job as done.</p>
-                
                 <input 
-                  type="text" 
-                  placeholder="Enter 4-digit OTP" 
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
-                  className="w-full px-4 py-4 text-center text-2xl tracking-[0.5em] font-bold border-2 border-white/50 bg-white/50 dark:bg-gray-800/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent mb-6 shadow-inner"
-                  maxLength={6}
+                  type="text" placeholder="Enter 4-digit OTP" value={otpCode} onChange={(e) => setOtpCode(e.target.value)}
+                  className="w-full px-4 py-4 text-center text-2xl tracking-[0.5em] font-bold border-2 border-white/50 bg-white/50 dark:bg-gray-800/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-6 shadow-inner" maxLength={6}
                 />
-                
-                <button 
-                  onClick={handleOtpSubmit}
-                  disabled={isSubmittingOtp}
-                  className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg flex justify-center items-center"
-                >
+                <button onClick={handleOtpSubmit} disabled={isSubmittingOtp} className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg flex justify-center items-center">
                   {isSubmittingOtp ? <Loader2 className="animate-spin w-5 h-5" /> : "Verify & Complete"}
                 </button>
               </>
@@ -276,7 +256,6 @@ export default function ProviderDashboard() {
           </div>
         </div>
       )}
-
       <AddServiceModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onSuccess={() => refreshDashboardData()} />
     </div>
   );

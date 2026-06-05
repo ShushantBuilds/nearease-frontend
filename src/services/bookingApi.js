@@ -1,12 +1,11 @@
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080") + "/api/bookings";
 
-// Helper function to safely extract the token from local storage
 const getAuthToken = () => {
   const savedUser = localStorage.getItem("nearEaseUser");
   if (savedUser) {
     try {
       const userObj = JSON.parse(savedUser);
-      return userObj.token; // Ensure your backend sends it as 'token'
+      return userObj.token; 
     } catch (e) {
       console.error("Failed to parse user from local storage");
       return null;
@@ -15,7 +14,6 @@ const getAuthToken = () => {
   return null;
 };
 
-// Standard headers for JSON requests (Securely attaches the token)
 const getHeaders = () => {
   const headers = { "Content-Type": "application/json" };
   const token = getAuthToken(); 
@@ -25,7 +23,6 @@ const getHeaders = () => {
   return headers;
 };
 
-// Helper to handle responses safely and throw actual errors
 const fetchWithAuth = async (url, options = {}) => {
   const res = await fetch(url, options);
   
@@ -42,32 +39,29 @@ const fetchWithAuth = async (url, options = {}) => {
   }
   
   const text = await res.text();
-  return text ? JSON.parse(text) : {};
+  const data = text ? JSON.parse(text) : {};
+
+  // THE FIX: Catch soft errors where the backend returns 200 OK but success is false
+  if (data && data.success === false) {
+     throw new Error(data.message || "Action failed on the server.");
+  }
+
+  return data;
 };
 
 export const BookingAPI = {
-  // --- NEW: Admin endpoint to fetch ALL platform bookings ---
   getAllPlatformBookings: async () => {
-    return fetchWithAuth(`${BASE_URL}/admin/all-bookings`, { 
-      headers: getHeaders() 
-    });
+    return fetchWithAuth(`${BASE_URL}/admin/all-bookings`, { headers: getHeaders() });
   },
 
-  // Get all bookings for the logged-in customer
   getAllBookings: async () => {
-    return fetchWithAuth(`${BASE_URL}/all-bookings`, { 
-      headers: getHeaders() 
-    });
+    return fetchWithAuth(`${BASE_URL}/all-bookings`, { headers: getHeaders() });
   },
 
-  // Get booking requests (Only for Providers)
   getBookingRequests: async () => {
-    return fetchWithAuth(`${BASE_URL}/booking-requests`, { 
-      headers: getHeaders() 
-    });
+    return fetchWithAuth(`${BASE_URL}/booking-requests`, { headers: getHeaders() });
   },
 
-  // Book a new service
   bookService: async (bookingData) => {
     return fetchWithAuth(`${BASE_URL}/bookService`, {
       method: "POST",
@@ -76,7 +70,6 @@ export const BookingAPI = {
     });
   },
 
-  // Update booking status (Sends status as a URL Query Parameter)
   updateStatus: async (bookingId, statusData) => {
     return fetchWithAuth(`${BASE_URL}/${bookingId}/status?status=${statusData.status}`, {
       method: "PUT",
@@ -84,41 +77,29 @@ export const BookingAPI = {
     });
   },
 
-  // Complete a booking (Provider submits before/after images & OTP)
-  completeBooking: async (bookingId, formData) => {
-    const token = getAuthToken();
-    return fetchWithAuth(`${BASE_URL}/${bookingId}/complete`, {
+  // THE FIX: Pass OTP cleanly as a query parameter so Spring Boot parses it correctly
+  completeBooking: async (bookingId, otpCode) => {
+    return fetchWithAuth(`${BASE_URL}/${bookingId}/complete?otp=${otpCode}`, {
       method: "PUT",
-      headers: { 
-        // Notice we do NOT include "Content-Type": "application/json" here
-        // The browser automatically sets the correct multipart/form-data boundary
-        "Authorization": token ? `Bearer ${token}` : "" 
-      },
-      body: formData, // Pass FormData directly
+      headers: getHeaders()
     });
   },
 
-  // OTP Management for bookings
   sendBookingOtp: async (bookingId) => {
     return fetchWithAuth(`${BASE_URL}/${bookingId}/send-otp`, { 
-      method: "POST", 
-      headers: getHeaders() 
+      method: "POST", headers: getHeaders() 
     });
   },
 
-  // Cancellation Flow
   requestCancel: async (bookingId) => {
     return fetchWithAuth(`${BASE_URL}/${bookingId}/cancel/request`, { 
-      method: "POST", 
-      headers: getHeaders() 
+      method: "POST", headers: getHeaders() 
     });
   },
   
-  // Confirm Cancellation with OTP
   confirmCancel: async (bookingId, otp) => {
     return fetchWithAuth(`${BASE_URL}/${bookingId}/cancel/confirm?otp=${otp}`, { 
-      method: "POST", 
-      headers: getHeaders() 
+      method: "POST", headers: getHeaders() 
     });
   }
 };

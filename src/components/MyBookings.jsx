@@ -14,7 +14,6 @@ export default function MyBookings() {
   // Soft Delete State
   const [hiddenIds, setHiddenIds] = useState(() => JSON.parse(localStorage.getItem("hiddenCustomerBookings") || "[]"));
 
-  // --- CANCELLATION OTP STATE ---
   const [cancellingBookingId, setCancellingBookingId] = useState(null);
   const [cancelOtp, setCancelOtp] = useState("");
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
@@ -63,18 +62,13 @@ export default function MyBookings() {
           try {
             await PaymentAPI.confirmPaymentSuccess(booking.id);
             alert("Payment Successful! The provider will arrive at the scheduled time.");
-            
             const freshData = await BookingAPI.getAllBookings();
             setBookings(Array.isArray(freshData) ? freshData : []);
           } catch (err) {
             alert("Payment succeeded, but we couldn't update the server. Please contact support.");
           }
         },
-        prefill: {
-          name: orderData.customerName,
-          email: orderData.customerEmail,
-          contact: orderData.customerPhone,
-        },
+        prefill: { name: orderData.customerName, email: orderData.customerEmail, contact: orderData.customerPhone },
         theme: { color: "#4f46e5" } 
       };
 
@@ -106,13 +100,11 @@ export default function MyBookings() {
       await BookingAPI.confirmCancel(cancellingBookingId, cancelOtp);
       setCancelMessage("Booking successfully cancelled.");
       setBookings(bookings.map(b => b.id === cancellingBookingId ? { ...b, bookingStatus: "CANCELLED" } : b));
-      
       setTimeout(() => {
         setCancellingBookingId(null);
         setCancelOtp("");
         setCancelMessage("");
       }, 2000);
-      
     } catch (err) {
       alert(err.message || "Invalid OTP. Please try again.");
     } finally {
@@ -135,10 +127,7 @@ export default function MyBookings() {
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1 class="logo">NearEase</h1>
-            <p>Official Service Invoice</p>
-          </div>
+          <div class="header"><h1 class="logo">NearEase</h1><p>Official Service Invoice</p></div>
           <div class="row"><strong>Order ID:</strong> <span>#${booking.id}</span></div>
           <div class="row"><strong>Date:</strong> <span>${new Date(booking.scheduledTime).toLocaleString()}</span></div>
           <div class="row"><strong>Service:</strong> <span>${booking.ServiceName || 'Service'}</span></div>
@@ -152,16 +141,15 @@ export default function MyBookings() {
     printWindow.print();
   };
 
-  // Soft Delete Handler
+  // --- DELETE LOGIC ---
   const handleDeleteCard = (id) => {
-    if(window.confirm("Remove this booking from your view?")) {
+    if(window.confirm("Are you sure you want to delete this booking from your view?")) {
       const updated = [...hiddenIds, id];
       setHiddenIds(updated);
       localStorage.setItem("hiddenCustomerBookings", JSON.stringify(updated));
     }
   };
 
-  // Filter out hidden cards
   const visibleBookings = bookings.filter(b => !hiddenIds.includes(b.id));
 
   if (isLoading) return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="w-10 h-10 animate-spin text-indigo-600" /></div>;
@@ -182,30 +170,27 @@ export default function MyBookings() {
             const isPast = new Date(booking.scheduledTime) < new Date();
 
             return (
-              <div key={booking.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all hover:shadow-md relative group">
+              <div key={booking.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all hover:shadow-md relative">
                 
-                {/* NEW: Soft Delete Icon */}
+                {/* --- PERMANENT DELETE ICON --- */}
                 <button 
                   onClick={() => handleDeleteCard(booking.id)} 
-                  className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors p-2 bg-white/80 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 shadow-sm z-10"
-                  title="Remove from view"
+                  className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors p-2 bg-red-50 hover:bg-red-100 rounded-full shadow-sm z-10"
+                  title="Delete from view"
                 >
                   <Trash2 size={18} />
                 </button>
 
-                {/* --- SMART STATUS BANNERS --- */}
                 {booking.bookingStatus === "PENDING" && !isPast && (
                   <div className="bg-yellow-50 text-yellow-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-yellow-100">
                     <Clock size={16} /> Request sent. Waiting for provider approval.
                   </div>
                 )}
-                
                 {booking.bookingStatus === "PENDING" && isPast && (
                   <div className="bg-gray-100 text-gray-600 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-gray-200">
                     <AlertCircle size={16} /> Request Expired. The scheduled time has passed without provider approval.
                   </div>
                 )}
-
                 {booking.bookingStatus === "CONFIRMED" && (
                   <div className="bg-blue-50 text-blue-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-blue-100">
                     <CheckCircle size={16} /> Your service request has been accepted! Please complete payment to secure your slot.
@@ -228,7 +213,7 @@ export default function MyBookings() {
                 )}
 
                 <div className="p-6">
-                  <div className="flex justify-between items-start mb-4 pr-10">
+                  <div className="flex justify-between items-start mb-4 pr-12">
                     <div>
                       <h3 className="text-xl font-bold text-gray-900 dark:text-white">{booking.ServiceName || "Service Booking"}</h3>
                       <p className="text-sm text-gray-500 font-mono mt-1">Booking ID: #{booking.id}</p>
@@ -257,30 +242,19 @@ export default function MyBookings() {
                     )}
                   </div>
 
-                  {/* Actions Footer */}
                   <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    
                     {booking.bookingStatus === "PENDING" && !isPast && (
-                      <button 
-                        onClick={() => handleInitiateCancel(booking.id)} 
-                        className="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors"
-                      >
+                      <button onClick={() => handleInitiateCancel(booking.id)} className="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors">
                         Cancel Booking
                       </button>
                     )}
 
                     {booking.bookingStatus === "CONFIRMED" && !isPast && (
                       <>
-                        <button 
-                          onClick={() => handleInitiateCancel(booking.id)} 
-                          className="text-gray-500 hover:text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors"
-                        >
+                        <button onClick={() => handleInitiateCancel(booking.id)} className="text-gray-500 hover:text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors">
                           Cancel
                         </button>
-                        <button 
-                          onClick={() => handlePayment(booking)} 
-                          className="bg-indigo-600 text-white hover:bg-indigo-700 px-6 py-2 rounded-lg font-bold transition-all shadow-md flex items-center gap-2 transform hover:-translate-y-0.5"
-                        >
+                        <button onClick={() => handlePayment(booking)} className="bg-indigo-600 text-white hover:bg-indigo-700 px-6 py-2 rounded-lg font-bold transition-all shadow-md flex items-center gap-2 transform hover:-translate-y-0.5">
                           <DollarSign size={18} /> Pay Now to Secure Booking
                         </button>
                       </>
@@ -293,10 +267,7 @@ export default function MyBookings() {
                         </button>
                         
                         {!booking.hasReviewed && (
-                          <button 
-                            onClick={() => { setSelectedBookingForReview(booking); setReviewModalOpen(true); }}
-                            className="bg-green-100 text-green-700 hover:bg-green-200 px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
-                          >
+                          <button onClick={() => { setSelectedBookingForReview(booking); setReviewModalOpen(true); }} className="bg-green-100 text-green-700 hover:bg-green-200 px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2">
                             <Star size={18} className="fill-green-700" /> Leave Review
                           </button>
                         )}
@@ -310,11 +281,9 @@ export default function MyBookings() {
         </div>
       )}
 
-      {/* --- CANCELLATION OTP MODAL --- */}
       {cancellingBookingId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">
-            
             <div className="absolute -top-20 -left-20 w-40 h-40 bg-red-500 rounded-full blur-3xl opacity-20"></div>
 
             {cancelMessage ? (
@@ -326,29 +295,12 @@ export default function MyBookings() {
               </div>
             ) : (
               <>
-                <button onClick={() => setCancellingBookingId(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-white z-10">
-                  <XCircle size={24} />
-                </button>
-                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <AlertCircle className="text-red-600 dark:text-red-400 w-8 h-8" />
-                </div>
+                <button onClick={() => setCancellingBookingId(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-white z-10"><XCircle size={24} /></button>
+                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center mx-auto mb-4"><AlertCircle className="text-red-600 dark:text-red-400 w-8 h-8" /></div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Confirm Cancellation</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Please enter the 4-digit OTP sent to your email to safely cancel this booking.</p>
-                
-                <input 
-                  type="text" 
-                  placeholder="Enter OTP" 
-                  value={cancelOtp}
-                  onChange={(e) => setCancelOtp(e.target.value)}
-                  className="w-full px-4 py-4 text-center text-2xl tracking-[0.5em] font-bold border-2 border-white/50 bg-white/50 dark:bg-gray-800/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent mb-6 shadow-inner"
-                  maxLength={6}
-                />
-                
-                <button 
-                  onClick={handleConfirmCancel}
-                  disabled={isSubmittingCancel}
-                  className="w-full bg-red-600 text-white py-3.5 rounded-xl font-bold hover:bg-red-700 transition shadow-lg flex justify-center items-center"
-                >
+                <input type="text" placeholder="Enter OTP" value={cancelOtp} onChange={(e) => setCancelOtp(e.target.value)} className="w-full px-4 py-4 text-center text-2xl tracking-[0.5em] font-bold border-2 border-white/50 bg-white/50 dark:bg-gray-800/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 mb-6 shadow-inner" maxLength={6} />
+                <button onClick={handleConfirmCancel} disabled={isSubmittingCancel} className="w-full bg-red-600 text-white py-3.5 rounded-xl font-bold hover:bg-red-700 transition shadow-lg flex justify-center items-center">
                   {isSubmittingCancel ? <Loader2 className="animate-spin w-5 h-5" /> : "Verify & Cancel"}
                 </button>
               </>
@@ -357,12 +309,7 @@ export default function MyBookings() {
         </div>
       )}
 
-      <ReviewModal 
-        isOpen={reviewModalOpen} 
-        onClose={() => setReviewModalOpen(false)} 
-        booking={selectedBookingForReview}
-        onSuccess={(bookingId) => setBookings(bookings.map(b => b.id === bookingId ? { ...b, hasReviewed: true } : b))}
-      />
+      <ReviewModal isOpen={reviewModalOpen} onClose={() => setReviewModalOpen(false)} booking={selectedBookingForReview} onSuccess={(bookingId) => setBookings(bookings.map(b => b.id === bookingId ? { ...b, hasReviewed: true } : b))} />
     </div>
   );
 }
