@@ -15,7 +15,7 @@ const getAuthToken = () => {
   return null;
 };
 
-// 1. Standard headers for JSON requests (FIXED: Now includes the token!)
+// Standard headers for JSON requests 
 const getHeaders = () => {
   const headers = { "Content-Type": "application/json" };
   const token = getAuthToken(); 
@@ -25,7 +25,7 @@ const getHeaders = () => {
   return headers;
 };
 
-// 2. Helper to handle responses safely and throw actual errors
+// Helper to handle responses safely and throw actual errors
 const fetchWithAuth = async (url, options = {}) => {
   const res = await fetch(url, options);
   
@@ -46,6 +46,7 @@ const fetchWithAuth = async (url, options = {}) => {
 };
 
 export const PaymentAPI = {
+  // 1. Create the Razorpay Order (Customer Flow)
   createOrder: async (bookingId) => {
     return fetchWithAuth(`${BASE_URL}/create-order/${bookingId}`, { 
       method: "POST", 
@@ -53,6 +54,15 @@ export const PaymentAPI = {
     });
   },
 
+  // 2. Notify backend of payment success (Customer Flow)
+  confirmPaymentSuccess: async (bookingId) => {
+    return fetchWithAuth(`${BASE_URL}/mock-success/${bookingId}`, { 
+      method: "POST", 
+      headers: getHeaders() 
+    });
+  },
+
+  // 3. Trigger provider payout (Admin/System Flow)
   processPayout: async (bookingId) => {
     return fetchWithAuth(`${BASE_URL}/payout/${bookingId}`, { 
       method: "POST", 
@@ -60,6 +70,7 @@ export const PaymentAPI = {
     });
   },
 
+  // 4. Trigger customer refund (Admin/System Flow)
   processRefund: async (bookingId) => {
     return fetchWithAuth(`${BASE_URL}/refund/${bookingId}`, { 
       method: "POST", 

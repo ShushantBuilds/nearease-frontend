@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Star, Printer, FileText } from "lucide-react";
+import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Star, Printer, FileText, DollarSign } from "lucide-react";
 import { BookingAPI } from "../services/bookingApi"; 
+import { PaymentAPI } from "../services/paymentApi";
 import ReviewModal from "./ReviewModal";
 
 export default function MyBookings() {
@@ -29,6 +30,68 @@ export default function MyBookings() {
     };
     fetchBookings();
   }, []);
+
+  // Helper to dynamically load the Razorpay script
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  // The main payment flow
+  const handlePayment = async (booking) => {
+    setIsLoading(true);
+    try {
+      // 1. Load the script
+      const res = await loadRazorpayScript();
+      if (!res) throw new Error("Razorpay SDK failed to load. Are you online?");
+
+      // 2. Create the order on your Spring Boot backend
+      const orderData = await PaymentAPI.createOrder(booking.id);
+
+      // 3. Configure the Razorpay Checkout Window
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID, 
+        amount: orderData.amountInPaise, 
+        currency: orderData.currency,
+        name: "NearEase",
+        description: `Payment for ${booking.ServiceName}`,
+        order_id: orderData.razorpayOrderId,
+        handler: async function (response) {
+          // 4. On Success: Tell the backend to mark it as PAID_TO_PLATFORM
+          try {
+            await PaymentAPI.confirmPaymentSuccess(booking.id);
+            alert("Payment Successful! The provider will arrive at the scheduled time.");
+            
+            // Re-fetch bookings to update UI state
+            const freshData = await BookingAPI.getAllBookings();
+            setBookings(Array.isArray(freshData) ? freshData : []);
+          } catch (err) {
+            alert("Payment succeeded, but we couldn't update the server. Please contact support.");
+          }
+        },
+        prefill: {
+          name: orderData.customerName,
+          email: orderData.customerEmail,
+          contact: orderData.customerPhone,
+        },
+        theme: { color: "#4f46e5" } 
+      };
+
+      // 5. Open the checkout window
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+
+    } catch (error) {
+      alert(error.message || "Failed to initiate payment.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleInitiateCancel = async (bookingId) => {
     if (!window.confirm("Are you sure you want to cancel this booking?")) return;
@@ -111,7 +174,6 @@ export default function MyBookings() {
       ) : (
         <div className="space-y-6">
           {bookings.map((booking) => {
-            // THE FIX: Check if the booking time is in the past
             const isPast = new Date(booking.scheduledTime) < new Date();
 
             return (
@@ -124,7 +186,6 @@ export default function MyBookings() {
                   </div>
                 )}
                 
-                {/* THE FIX: Show an Expired banner if it's pending but the time has passed */}
                 {booking.bookingStatus === "PENDING" && isPast && (
                   <div className="bg-gray-100 text-gray-600 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-gray-200">
                     <AlertCircle size={16} /> Request Expired. The scheduled time has passed without provider approval.
@@ -133,7 +194,7 @@ export default function MyBookings() {
 
                 {booking.bookingStatus === "CONFIRMED" && (
                   <div className="bg-blue-50 text-blue-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-blue-100">
-                    <CheckCircle size={16} /> Your service request has been accepted!
+                    <CheckCircle size={16} /> Your service request has been accepted! Please complete payment to secure your slot.
                   </div>
                 )}
                 {booking.bookingStatus === "COMPLETED" && (
@@ -183,15 +244,34 @@ export default function MyBookings() {
                   </div>
 
                   {/* Actions Footer */}
-                  <div className="flex justify-end gap-3 pt-2">
-                    {/* THE FIX: Only allow cancellation if the booking is active AND the date is NOT in the past */}
-                    {(booking.bookingStatus === "PENDING" || booking.bookingStatus === "CONFIRMED") && !isPast && (
+                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    
+                    {/* ONLY Cancel button for PENDING requests */}
+                    {booking.bookingStatus === "PENDING" && !isPast && (
                       <button 
                         onClick={() => handleInitiateCancel(booking.id)} 
                         className="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors"
                       >
                         Cancel Booking
                       </button>
+                    )}
+
+                    {/* NEW: Payment Action for CONFIRMED requests */}
+                    {booking.bookingStatus === "CONFIRMED" && !isPast && (
+                      <>
+                        <button 
+                          onClick={() => handleInitiateCancel(booking.id)} 
+                          className="text-gray-500 hover:text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          onClick={() => handlePayment(booking)} 
+                          className="bg-indigo-600 text-white hover:bg-indigo-700 px-6 py-2 rounded-lg font-bold transition-all shadow-md flex items-center gap-2 transform hover:-translate-y-0.5"
+                        >
+                          <DollarSign size={18} /> Pay Now to Secure Booking
+                        </button>
+                      </>
                     )}
                     
                     {booking.bookingStatus === "COMPLETED" && (
