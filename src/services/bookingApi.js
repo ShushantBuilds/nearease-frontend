@@ -15,7 +15,7 @@ const getAuthToken = () => {
   return null;
 };
 
-// Standard headers for JSON requests
+// Standard headers for JSON requests (Securely attaches the token)
 const getHeaders = () => {
   const headers = { "Content-Type": "application/json" };
   const token = getAuthToken(); 
@@ -46,6 +46,13 @@ const fetchWithAuth = async (url, options = {}) => {
 };
 
 export const BookingAPI = {
+  // --- NEW: Admin endpoint to fetch ALL platform bookings ---
+  getAllPlatformBookings: async () => {
+    return fetchWithAuth(`${BASE_URL}/admin/all-bookings`, { 
+      headers: getHeaders() 
+    });
+  },
+
   // Get all bookings for the logged-in customer
   getAllBookings: async () => {
     return fetchWithAuth(`${BASE_URL}/all-bookings`, { 
@@ -69,26 +76,25 @@ export const BookingAPI = {
     });
   },
 
-  // --- FIX 1: Send status as a URL Query Parameter, NOT JSON Body ---
+  // Update booking status (Sends status as a URL Query Parameter)
   updateStatus: async (bookingId, statusData) => {
     return fetchWithAuth(`${BASE_URL}/${bookingId}/status?status=${statusData.status}`, {
       method: "PUT",
       headers: getHeaders(),
-      // We removed the JSON body because the backend reads from the URL
     });
   },
 
-  // --- FIX 2: Handle FormData correctly without application/json headers ---
+  // Complete a booking (Provider submits before/after images & OTP)
   completeBooking: async (bookingId, formData) => {
     const token = getAuthToken();
     return fetchWithAuth(`${BASE_URL}/${bookingId}/complete`, {
       method: "PUT",
       headers: { 
         // Notice we do NOT include "Content-Type": "application/json" here
-        // The browser will automatically set the correct multipart/form-data boundary
+        // The browser automatically sets the correct multipart/form-data boundary
         "Authorization": token ? `Bearer ${token}` : "" 
       },
-      body: formData, // Pass FormData directly, DO NOT JSON.stringify it!
+      body: formData, // Pass FormData directly
     });
   },
 
@@ -108,7 +114,7 @@ export const BookingAPI = {
     });
   },
   
-  // --- FIX 3: Added the missing OTP parameter to match backend ---
+  // Confirm Cancellation with OTP
   confirmCancel: async (bookingId, otp) => {
     return fetchWithAuth(`${BASE_URL}/${bookingId}/cancel/confirm?otp=${otp}`, { 
       method: "POST", 

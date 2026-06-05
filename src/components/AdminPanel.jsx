@@ -32,7 +32,8 @@ export default function AdminPanel() {
     try {
       const [providersData, bookingsData] = await Promise.all([
         AdminAPI.getPendingProviders().catch(() => []),
-        BookingAPI.getAllBookings().catch(() => []) 
+        // THE FIX: Now using the dedicated Admin endpoint to get ALL platform bookings
+        BookingAPI.getAllPlatformBookings().catch(() => []) 
       ]);
       setPendingApplications(Array.isArray(providersData) ? providersData : []);
       setBookings(Array.isArray(bookingsData) ? bookingsData : []);
@@ -44,7 +45,7 @@ export default function AdminPanel() {
   };
 
   // ==========================================
-  // --- VERIFICATION HANDLERS (Your Code) ---
+  // --- VERIFICATION HANDLERS ---
   // ==========================================
   const handleDecision = async (id, decision) => {
     if (!window.confirm(`Are you sure you want to ${decision} this application?`)) return;
@@ -65,7 +66,7 @@ export default function AdminPanel() {
   };
 
   // ==========================================
-  // --- FINANCIAL HANDLERS (My Code) ---
+  // --- FINANCIAL HANDLERS ---
   // ==========================================
   const handlePayout = async (bookingId) => {
     if (!window.confirm(`Are you sure you want to release funds to the provider for Booking #${bookingId}?`)) return;
@@ -162,7 +163,7 @@ export default function AdminPanel() {
       </div>
 
       {/* ========================================== */}
-      {/* TAB 1: PROVIDER VERIFICATIONS (YOUR CODE) */}
+      {/* TAB 1: PROVIDER VERIFICATIONS */}
       {/* ========================================== */}
       {activeTab === "verifications" && (
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 animate-in fade-in">
@@ -222,7 +223,7 @@ export default function AdminPanel() {
       )}
 
       {/* ========================================== */}
-      {/* TAB 2: FINANCIALS & ESCROW (MY CODE) */}
+      {/* TAB 2: FINANCIALS & ESCROW */}
       {/* ========================================== */}
       {activeTab === "financials" && (
         <div className="animate-in fade-in">
