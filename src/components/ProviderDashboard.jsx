@@ -48,11 +48,22 @@ export default function ProviderDashboard() {
         setRequests(requests.filter(req => req.id !== bookingId));
         alert("Request rejected.");
       } else {
-        // Update the correct 'bookingStatus' field to match your backend DTO
         setRequests(requests.map(req => req.id === bookingId ? { ...req, bookingStatus: "CONFIRMED" } : req));
       }
     } catch (error) {
       alert(`Failed to update request.`);
+    }
+  };
+
+  // --- THE FIX: Tell the backend to email the OTP before opening the modal ---
+  const handleInitiateCompletion = async (bookingId) => {
+    try {
+      // Trigger the backend email service
+      await BookingAPI.sendBookingOtp(bookingId);
+      // Open the OTP Modal only after the email has been successfully sent
+      setCompletingJobId(bookingId);
+    } catch (error) {
+      alert(error.message || "Failed to send OTP to the customer. Please try again.");
     }
   };
 
@@ -66,14 +77,11 @@ export default function ProviderDashboard() {
       
       await BookingAPI.completeBooking(completingJobId, formData);
       
-      // Show Success Message in Modal
       setCompletionMessage("The Service has been completed.");
       
-      // Update UI in background with the correct 'bookingStatus'
       setRequests(requests.map(req => req.id === completingJobId ? { ...req, bookingStatus: "COMPLETED" } : req));
       refreshDashboardData(); 
       
-      // Close modal after 2 seconds
       setTimeout(() => {
         setCompletingJobId(null);
         setOtpCode("");
@@ -81,7 +89,7 @@ export default function ProviderDashboard() {
       }, 2000);
       
     } catch (error) {
-      alert("Invalid OTP. Please check with the customer.");
+      alert(error.message || "Invalid OTP. Please check with the customer.");
     } finally {
       setIsSubmittingOtp(false);
     }
@@ -126,7 +134,6 @@ export default function ProviderDashboard() {
             <div className="w-14 h-14 bg-yellow-100 text-yellow-600 rounded-2xl flex items-center justify-center"><Clock size={28} /></div>
             <div>
               <p className="text-sm font-medium text-gray-500">Pending Requests</p>
-              {/* THE FIX: Now filtering by bookingStatus instead of status */}
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{requests.filter(r => r.bookingStatus === "PENDING").length}</h3>
             </div>
           </div>
@@ -147,7 +154,6 @@ export default function ProviderDashboard() {
         <div className="space-y-6 animate-in fade-in">
           <h2 className="text-xl font-bold dark:text-white">{activeTab === "completed" ? "Job History" : "Active Service Requests"}</h2>
           
-          {/* THE FIX: Updated to bookingStatus */}
           {requests.filter(job => activeTab === "completed" ? job.bookingStatus === "COMPLETED" : job.bookingStatus !== "COMPLETED").length === 0 ? (
             <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300"><Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" /><p className="text-gray-500">No requests to display.</p></div>
           ) : (
@@ -158,14 +164,11 @@ export default function ProviderDashboard() {
                 
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    {/* THE FIX: Correctly mapping ServiceName from DTO */}
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">{job.ServiceName || "Service Requested"}</h3>
                     <p className="text-sm font-mono text-gray-500 mt-1">Booking ID: #{job.id}</p>
                   </div>
                   <div className="text-right">
-                    {/* THE FIX: Correctly mapping price from DTO */}
                     <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">₹{job.price || 0}</p>
-                    {/* THE FIX: Correctly mapping bookingStatus from DTO */}
                     <span className="inline-block mt-1 px-3 py-1 text-xs font-bold rounded-full uppercase bg-gray-100 text-gray-800">
                       {job.bookingStatus}
                     </span>
@@ -173,12 +176,10 @@ export default function ProviderDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl mb-4 border border-gray-100 dark:border-gray-700">
-                  {/* THE FIX: Correctly mapping scheduledTime from DTO to fix "Invalid Date" */}
                   <p className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"><Calendar className="w-4 h-4 text-gray-400 mt-0.5" /> <span><strong>Time:</strong> <br/>{new Date(job.scheduledTime).toLocaleString()}</span></p>
                   <p className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"><MapPin className="w-4 h-4 text-gray-400 mt-0.5" /> <span><strong>Location:</strong> <br/>{job.workLocation}</span></p>
                   <p className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"><User className="w-4 h-4 text-gray-400 mt-0.5" /> <span><strong>Customer:</strong> <br/>{job.customer?.firstName} {job.customer?.lastName}</span></p>
                   
-                  {/* THE FIX: Correctly mapping CostumerRequest (with a 'C' and 'o' as written in your backend) */}
                   {(job.CostumerRequest || job.customerRequest) && (
                     <p className="flex items-start gap-2 text-sm text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg md:col-span-2 mt-2">
                       <FileText className="w-4 h-4 mt-0.5 shrink-0" /> 
@@ -201,7 +202,8 @@ export default function ProviderDashboard() {
 
                 {(job.bookingStatus === "CONFIRMED" || job.bookingStatus === "ACCEPTED") && (
                   <div className="pt-2">
-                    <button onClick={() => setCompletingJobId(job.id)} className="w-full bg-green-500 text-white py-3.5 rounded-xl font-bold hover:bg-green-600 transition flex justify-center items-center gap-2 shadow-sm">
+                    {/* THE FIX: Replaced simple state toggle with the handleInitiateCompletion function */}
+                    <button onClick={() => handleInitiateCompletion(job.id)} className="w-full bg-green-500 text-white py-3.5 rounded-xl font-bold hover:bg-green-600 transition flex justify-center items-center gap-2 shadow-sm">
                       <CheckCircle size={20} /> Mark as Complete
                     </button>
                   </div>
@@ -217,7 +219,6 @@ export default function ProviderDashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">
             
-            {/* Background glowing orb for glass effect */}
             <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500 rounded-full blur-3xl opacity-20"></div>
 
             {completionMessage ? (
@@ -236,7 +237,7 @@ export default function ProviderDashboard() {
                   <CheckCircle className="text-indigo-600 dark:text-indigo-400 w-8 h-8" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Complete Service</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Ask the customer for the OTP sent to their email to mark this job as done.</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">An OTP has been sent to the customer's email. Ask them for the 4-digit code to mark this job as done.</p>
                 
                 <input 
                   type="text" 
