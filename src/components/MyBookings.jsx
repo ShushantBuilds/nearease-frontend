@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Star, Printer, FileText, DollarSign } from "lucide-react";
+import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Star, Printer, FileText, DollarSign, Trash2 } from "lucide-react";
 import { BookingAPI } from "../services/bookingApi"; 
 import { PaymentAPI } from "../services/paymentApi";
 import ReviewModal from "./ReviewModal";
@@ -10,6 +10,9 @@ export default function MyBookings() {
   const [error, setError] = useState("");
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedBookingForReview, setSelectedBookingForReview] = useState(null);
+  
+  // Soft Delete State
+  const [hiddenIds, setHiddenIds] = useState(() => JSON.parse(localStorage.getItem("hiddenCustomerBookings") || "[]"));
 
   // --- CANCELLATION OTP STATE ---
   const [cancellingBookingId, setCancellingBookingId] = useState(null);
@@ -31,7 +34,6 @@ export default function MyBookings() {
     fetchBookings();
   }, []);
 
-  // Helper to dynamically load the Razorpay script
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
       const script = document.createElement("script");
@@ -42,18 +44,14 @@ export default function MyBookings() {
     });
   };
 
-  // The main payment flow
   const handlePayment = async (booking) => {
     setIsLoading(true);
     try {
-      // 1. Load the script
       const res = await loadRazorpayScript();
       if (!res) throw new Error("Razorpay SDK failed to load. Are you online?");
 
-      // 2. Create the order on your Spring Boot backend
       const orderData = await PaymentAPI.createOrder(booking.id);
 
-      // 3. Configure the Razorpay Checkout Window
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID, 
         amount: orderData.amountInPaise, 
@@ -62,12 +60,10 @@ export default function MyBookings() {
         description: `Payment for ${booking.ServiceName}`,
         order_id: orderData.razorpayOrderId,
         handler: async function (response) {
-          // 4. On Success: Tell the backend to mark it as PAID_TO_PLATFORM
           try {
             await PaymentAPI.confirmPaymentSuccess(booking.id);
             alert("Payment Successful! The provider will arrive at the scheduled time.");
             
-            // Re-fetch bookings to update UI state
             const freshData = await BookingAPI.getAllBookings();
             setBookings(Array.isArray(freshData) ? freshData : []);
           } catch (err) {
@@ -82,7 +78,6 @@ export default function MyBookings() {
         theme: { color: "#4f46e5" } 
       };
 
-      // 5. Open the checkout window
       const paymentObject = new window.Razorpay(options);
       paymentObject.open();
 
@@ -109,9 +104,7 @@ export default function MyBookings() {
     
     try {
       await BookingAPI.confirmCancel(cancellingBookingId, cancelOtp);
-      
       setCancelMessage("Booking successfully cancelled.");
-      
       setBookings(bookings.map(b => b.id === cancellingBookingId ? { ...b, bookingStatus: "CANCELLED" } : b));
       
       setTimeout(() => {
@@ -159,6 +152,18 @@ export default function MyBookings() {
     printWindow.print();
   };
 
+  // Soft Delete Handler
+  const handleDeleteCard = (id) => {
+    if(window.confirm("Remove this booking from your view?")) {
+      const updated = [...hiddenIds, id];
+      setHiddenIds(updated);
+      localStorage.setItem("hiddenCustomerBookings", JSON.stringify(updated));
+    }
+  };
+
+  // Filter out hidden cards
+  const visibleBookings = bookings.filter(b => !hiddenIds.includes(b.id));
+
   if (isLoading) return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="w-10 h-10 animate-spin text-indigo-600" /></div>;
   if (error) return <div className="text-center mt-20 text-red-500 font-bold">{error}</div>;
 
@@ -166,19 +171,28 @@ export default function MyBookings() {
     <div className="max-w-4xl mx-auto px-4 py-8 relative">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">My Bookings</h1>
 
-      {bookings.length === 0 ? (
+      {visibleBookings.length === 0 ? (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-10 text-center border border-dashed border-gray-300 dark:border-gray-700">
           <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No bookings yet</h3>
         </div>
       ) : (
         <div className="space-y-6">
-          {bookings.map((booking) => {
+          {visibleBookings.map((booking) => {
             const isPast = new Date(booking.scheduledTime) < new Date();
 
             return (
-              <div key={booking.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all hover:shadow-md">
+              <div key={booking.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all hover:shadow-md relative group">
                 
+                {/* NEW: Soft Delete Icon */}
+                <button 
+                  onClick={() => handleDeleteCard(booking.id)} 
+                  className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors p-2 bg-white/80 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 shadow-sm z-10"
+                  title="Remove from view"
+                >
+                  <Trash2 size={18} />
+                </button>
+
                 {/* --- SMART STATUS BANNERS --- */}
                 {booking.bookingStatus === "PENDING" && !isPast && (
                   <div className="bg-yellow-50 text-yellow-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-yellow-100">
@@ -214,7 +228,7 @@ export default function MyBookings() {
                 )}
 
                 <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-4 pr-10">
                     <div>
                       <h3 className="text-xl font-bold text-gray-900 dark:text-white">{booking.ServiceName || "Service Booking"}</h3>
                       <p className="text-sm text-gray-500 font-mono mt-1">Booking ID: #{booking.id}</p>
@@ -246,7 +260,6 @@ export default function MyBookings() {
                   {/* Actions Footer */}
                   <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
                     
-                    {/* ONLY Cancel button for PENDING requests */}
                     {booking.bookingStatus === "PENDING" && !isPast && (
                       <button 
                         onClick={() => handleInitiateCancel(booking.id)} 
@@ -256,7 +269,6 @@ export default function MyBookings() {
                       </button>
                     )}
 
-                    {/* NEW: Payment Action for CONFIRMED requests */}
                     {booking.bookingStatus === "CONFIRMED" && !isPast && (
                       <>
                         <button 
@@ -298,7 +310,7 @@ export default function MyBookings() {
         </div>
       )}
 
-      {/* --- CANCELLATION OTP MODAL (GLASSMORPHISM) --- */}
+      {/* --- CANCELLATION OTP MODAL --- */}
       {cancellingBookingId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">

@@ -7,7 +7,6 @@ import AuthModal from "./components/AuthModal";
 import ServiceCard from "./components/ServiceCard";
 import ServicePage from "./components/ServicePage";
 import CheckoutPage from "./components/CheckoutPage"; 
-import PaymentGateway from "./components/PaymentGateway"; // Make sure to import this!
 import PreviewModal from "./components/PreviewModal";
 import MyBookings from "./components/MyBookings"; 
 import ProviderDashboard from "./components/ProviderDashboard";
@@ -44,7 +43,6 @@ export default function App() {
   const [selectedModalListing, setSelectedModalListing] = useState(null);
   const [activePage, setActivePage] = useState("home"); 
   const [bookingService, setBookingService] = useState(null);
-  const [checkoutData, setCheckoutData] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -114,10 +112,8 @@ export default function App() {
         let data = [];
         
         if (activeMainCategory === "All") {
-          // If "All" is selected, fetch everything
           data = await PublicAPI.getAllOfferings(); 
         } else if (activeSubCategory && activeSubCategory.id) {
-          // If a specific subcategory is selected, fetch only those
           data = await PublicAPI.getOfferingsByType(activeSubCategory.id);
         }
 
@@ -146,15 +142,12 @@ export default function App() {
   };
 
   const filteredListings = listings.filter((item) => {
-    // 1. Search Filter
     const itemName = item?.name || item?.serviceType?.name || ""; 
     const matchesSearch = itemName.toLowerCase().includes(search.toLowerCase());
 
-    // 2. Location Filter
     const itemLoc = item?.location || item?.provider?.address || "";
     const matchesLoc = itemLoc ? itemLoc.toLowerCase().includes(location.toLowerCase()) : true;
     
-    // 3. Category & Subcategory Filter (THE FIX)
     let matchesCategory = true;
     
     if (activeMainCategory !== "All") {
@@ -165,10 +158,8 @@ export default function App() {
       const targetSubCat = activeSubCategory ? activeSubCategory.name.toLowerCase() : null;
 
       if (targetSubCat) {
-        // If they clicked a subcategory (like "Local Restaurants"), strictly match it
         matchesCategory = (itemSubCat === targetSubCat);
       } else {
-        // If they only clicked a main category (like "Semi-Luxurious"), match the main category
         matchesCategory = (itemMainCat === targetMainCat);
       }
     }
@@ -237,7 +228,6 @@ export default function App() {
             {/* MAIN CONTENT GRID */}
             <main ref={mainContentRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-gray-100 dark:border-gray-800">
               
-              {/* Dynamic Main Category Selection */}
               <div className="mb-10">
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Choose an Experience</h3>
                 <div className="flex gap-4 overflow-x-auto pb-2">
@@ -266,7 +256,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Dynamic Subcategory Filters */}
               {activeMainCategory !== "All" && subCategories.length > 0 && (
                 <div className="mb-12 animate-in slide-in-from-top-4 duration-300">
                   <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Filter by Type</h4>
@@ -284,7 +273,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* Listings Grid */}
               <div>
                 <div className="flex items-center gap-3 mb-8">
                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -329,18 +317,8 @@ export default function App() {
           <CheckoutPage 
              service={bookingService} 
              onBack={() => setActivePage("home")} 
-             // 2. UPDATED: Save the form data before changing the page
-             onProceedToGateway={(formData) => { 
-                setCheckoutData(formData); 
-                setActivePage("payment-gateway"); 
-             }} 
-          />
-        ) : activePage === "payment-gateway" ? (
-          <PaymentGateway 
-             service={bookingService}
-             checkoutData={checkoutData} // 3. UPDATED: Pass the data into the gateway
-             onComplete={() => setActivePage("home")}
-             onFail={() => setActivePage("checkout")}
+             // THE FIX: Directly routes to bookings on success
+             onComplete={() => setActivePage("bookings")} 
           />
         ) : activePage === "bookings" ? (
           <MyBookings />

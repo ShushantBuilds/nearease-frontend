@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   Briefcase, DollarSign, Clock, CheckCircle, AlertCircle, MapPin, 
-  Calendar, User, Loader2, Plus, TrendingUp, XCircle, FileText
+  Calendar, User, Loader2, Plus, TrendingUp, XCircle, FileText, Trash2
 } from "lucide-react";
 import { ProviderAPI } from "../services/providerApi";
 import { BookingAPI } from "../services/bookingApi";
@@ -13,6 +13,9 @@ export default function ProviderDashboard() {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  
+  // Soft Delete State
+  const [hiddenIds, setHiddenIds] = useState(() => JSON.parse(localStorage.getItem("hiddenProviderBookings") || "[]"));
   
   // OTP Modal State
   const [completingJobId, setCompletingJobId] = useState(null);
@@ -40,13 +43,11 @@ export default function ProviderDashboard() {
 
   const handleStatusChange = async (bookingId, newStatus) => {
     try {
-      // Backend expects 'CONFIRMED' when a provider accepts based on standard enums
       const statusToSend = newStatus === "ACCEPTED" ? "CONFIRMED" : newStatus;
       await BookingAPI.updateStatus(bookingId, { status: statusToSend });
       
       if (newStatus === "REJECTED") {
         setRequests(requests.filter(req => req.id !== bookingId));
-        alert("Request rejected.");
       } else {
         setRequests(requests.map(req => req.id === bookingId ? { ...req, bookingStatus: "CONFIRMED" } : req));
       }
@@ -55,12 +56,9 @@ export default function ProviderDashboard() {
     }
   };
 
-  // --- THE FIX: Tell the backend to email the OTP before opening the modal ---
   const handleInitiateCompletion = async (bookingId) => {
     try {
-      // Trigger the backend email service
       await BookingAPI.sendBookingOtp(bookingId);
-      // Open the OTP Modal only after the email has been successfully sent
       setCompletingJobId(bookingId);
     } catch (error) {
       alert(error.message || "Failed to send OTP to the customer. Please try again.");
@@ -79,13 +77,15 @@ export default function ProviderDashboard() {
       
       setCompletionMessage("The Service has been completed.");
       
+      // THE FIX: Optimistically update the UI instantly so the card moves to the Completed tab
       setRequests(requests.map(req => req.id === completingJobId ? { ...req, bookingStatus: "COMPLETED" } : req));
-      refreshDashboardData(); 
       
+      // THE FIX: Wait for the modal to close BEFORE fetching fresh data to avoid the race condition
       setTimeout(() => {
         setCompletingJobId(null);
         setOtpCode("");
         setCompletionMessage("");
+        refreshDashboardData(); 
       }, 2000);
       
     } catch (error) {
@@ -94,6 +94,18 @@ export default function ProviderDashboard() {
       setIsSubmittingOtp(false);
     }
   };
+
+  // Soft Delete Handler
+  const handleDeleteCard = (id) => {
+    if(window.confirm("Remove this request from your view?")) {
+      const updated = [...hiddenIds, id];
+      setHiddenIds(updated);
+      localStorage.setItem("hiddenProviderBookings", JSON.stringify(updated));
+    }
+  };
+
+  // Filter out hidden cards
+  const visibleRequests = requests.filter(r => !hiddenIds.includes(r.id));
 
   if (isLoading) return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="w-10 h-10 animate-spin text-indigo-600" /></div>;
 
@@ -107,7 +119,6 @@ export default function ProviderDashboard() {
         </button>
       </div>
 
-      {/* INTERACTIVE METRICS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div onClick={() => setActiveTab("earnings")} className={`p-6 rounded-2xl border transition-all cursor-pointer dark:bg-gray-800 ${activeTab === "earnings" ? "border-indigo-500 shadow-md ring-2 ring-indigo-100" : "border-gray-100 dark:border-gray-700 bg-white"}`}>
           <div className="flex items-center gap-4">
@@ -134,13 +145,12 @@ export default function ProviderDashboard() {
             <div className="w-14 h-14 bg-yellow-100 text-yellow-600 rounded-2xl flex items-center justify-center"><Clock size={28} /></div>
             <div>
               <p className="text-sm font-medium text-gray-500">Pending Requests</p>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{requests.filter(r => r.bookingStatus === "PENDING").length}</h3>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{visibleRequests.filter(r => r.bookingStatus === "PENDING").length}</h3>
             </div>
           </div>
         </div>
       </div>
 
-      {/* DYNAMIC VIEWS */}
       {activeTab === "earnings" && (
         <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm animate-in fade-in">
           <div className="flex items-center gap-3 mb-6"><TrendingUp className="text-indigo-600" /><h2 className="text-xl font-bold dark:text-white">Earnings History</h2></div>
@@ -154,15 +164,24 @@ export default function ProviderDashboard() {
         <div className="space-y-6 animate-in fade-in">
           <h2 className="text-xl font-bold dark:text-white">{activeTab === "completed" ? "Job History" : "Active Service Requests"}</h2>
           
-          {requests.filter(job => activeTab === "completed" ? job.bookingStatus === "COMPLETED" : job.bookingStatus !== "COMPLETED").length === 0 ? (
+          {visibleRequests.filter(job => activeTab === "completed" ? job.bookingStatus === "COMPLETED" : job.bookingStatus !== "COMPLETED").length === 0 ? (
             <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300"><Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" /><p className="text-gray-500">No requests to display.</p></div>
           ) : (
-            requests
+            visibleRequests
               .filter(job => activeTab === "completed" ? job.bookingStatus === "COMPLETED" : job.bookingStatus !== "COMPLETED")
               .map((job) => (
-              <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 shadow-sm p-6">
+              <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 shadow-sm p-6 relative group">
                 
-                <div className="flex justify-between items-start mb-4">
+                {/* NEW: Soft Delete Icon */}
+                <button 
+                  onClick={() => handleDeleteCard(job.id)} 
+                  className="absolute top-6 right-6 text-gray-300 hover:text-red-500 transition-colors p-2 bg-gray-50 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100"
+                  title="Remove from view"
+                >
+                  <Trash2 size={18} />
+                </button>
+
+                <div className="flex justify-between items-start mb-4 pr-12">
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">{job.ServiceName || "Service Requested"}</h3>
                     <p className="text-sm font-mono text-gray-500 mt-1">Booking ID: #{job.id}</p>
@@ -188,7 +207,6 @@ export default function ProviderDashboard() {
                   )}
                 </div>
 
-                {/* --- BUTTON STATES WITH CORRECT BOOKING STATUS --- */}
                 {job.bookingStatus === "PENDING" && (
                   <div className="flex gap-4 pt-2">
                     <button onClick={() => handleStatusChange(job.id, "ACCEPTED")} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition">
@@ -202,7 +220,6 @@ export default function ProviderDashboard() {
 
                 {(job.bookingStatus === "CONFIRMED" || job.bookingStatus === "ACCEPTED") && (
                   <div className="pt-2">
-                    {/* THE FIX: Replaced simple state toggle with the handleInitiateCompletion function */}
                     <button onClick={() => handleInitiateCompletion(job.id)} className="w-full bg-green-500 text-white py-3.5 rounded-xl font-bold hover:bg-green-600 transition flex justify-center items-center gap-2 shadow-sm">
                       <CheckCircle size={20} /> Mark as Complete
                     </button>
@@ -214,7 +231,6 @@ export default function ProviderDashboard() {
         </div>
       )}
       
-      {/* --- GLASSMORPHISM OTP MODAL --- */}
       {completingJobId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">

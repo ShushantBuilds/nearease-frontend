@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { ArrowLeft, MapPin, Calendar, FileText, CheckCircle, Loader2 } from "lucide-react";
-import { BookingAPI } from "../services/bookingApi"; // Ensure this path is correct
+import { BookingAPI } from "../services/bookingApi"; 
 
 export default function CheckoutPage({ service, onBack, onComplete }) {
   const [formData, setFormData] = useState({
     scheduleTime: "",
     workLocation: "",
     customerRequest: "",
-    city: "Default City", // Update these based on your actual form needs
+    city: "Default City", 
     state: "Default State",
     pinCode: "000000"
   });
@@ -60,8 +60,10 @@ export default function CheckoutPage({ service, onBack, onComplete }) {
             <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-1">Your Booking ID</p>
             <p className="text-xl font-mono font-bold text-indigo-600 dark:text-indigo-400">#{successData.bookingId}</p>
           </div>
+          
+          {/* This button relies on the onComplete prop passed from App.jsx! */}
           <button 
-            onClick={onComplete} // Should trigger setActivePage("bookings") in App.jsx
+            onClick={onComplete} 
             className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md"
           >
             View My Bookings
@@ -81,7 +83,7 @@ export default function CheckoutPage({ service, onBack, onComplete }) {
       <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
         <div className="bg-indigo-600 p-6 text-white">
           <h1 className="text-2xl font-bold">Complete Your Request</h1>
-          <p className="text-indigo-100 mt-1">{service?.name}</p>
+          <p className="text-indigo-100 mt-1">{service?.name || service?.serviceType?.name || "Service Booking"}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
