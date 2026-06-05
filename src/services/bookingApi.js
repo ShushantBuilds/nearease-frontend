@@ -79,9 +79,10 @@ export const BookingAPI = {
 
   // THE FIX: Pass OTP cleanly as a query parameter so Spring Boot parses it correctly
   completeBooking: async (bookingId, otpCode) => {
-    return fetchWithAuth(`${BASE_URL}/${bookingId}/complete?otp=${otpCode}`, {
+    return fetchWithAuth(`${BASE_URL}/${bookingId}/complete`, {
       method: "PUT",
-      headers: getHeaders()
+      headers: getHeaders(), // This securely attaches 'Content-Type: application/json'
+      body: JSON.stringify({ otp: otpCode }), // Matches your original backend design
     });
   },
 
