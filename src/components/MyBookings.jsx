@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Star, Printer, FileText, DollarSign, Trash2 } from "lucide-react";
+import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Star, Printer, FileText, DollarSign, Trash2, ShieldCheck } from "lucide-react";
 import { BookingAPI } from "../services/bookingApi"; 
 import { PaymentAPI } from "../services/paymentApi";
 import ReviewModal from "./ReviewModal";
@@ -11,7 +11,6 @@ export default function MyBookings() {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedBookingForReview, setSelectedBookingForReview] = useState(null);
   
-  // Soft Delete State
   const [hiddenIds, setHiddenIds] = useState(() => JSON.parse(localStorage.getItem("hiddenCustomerBookings") || "[]"));
 
   const [cancellingBookingId, setCancellingBookingId] = useState(null);
@@ -20,18 +19,19 @@ export default function MyBookings() {
   const [cancelMessage, setCancelMessage] = useState("");
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const data = await BookingAPI.getAllBookings();
-        setBookings(Array.isArray(data) ? data : []); 
-      } catch (err) {
-        setError("Failed to load your bookings. Please try again later.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchBookings();
   }, []);
+
+  const fetchBookings = async () => {
+    try {
+      const data = await BookingAPI.getAllBookings();
+      setBookings(Array.isArray(data) ? data : []); 
+    } catch (err) {
+      setError("Failed to load your bookings. Please try again later.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -60,12 +60,17 @@ export default function MyBookings() {
         order_id: orderData.razorpayOrderId,
         handler: async function (response) {
           try {
-            await PaymentAPI.confirmPaymentSuccess(booking.id);
-            alert("Payment Successful! The provider will arrive at the scheduled time.");
-            const freshData = await BookingAPI.getAllBookings();
-            setBookings(Array.isArray(freshData) ? freshData : []);
+            // Include Razorpay Payment ID to help backend map it properly to avoid SQL constraints
+            await PaymentAPI.confirmPaymentSuccess(booking.id, {
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature
+            });
+            alert("Payment Successful! Your funds are secured in Escrow.");
+            fetchBookings(); // Refresh the list to show the green Secured badge
           } catch (err) {
-            alert("Payment succeeded, but we couldn't update the server. Please contact support.");
+            alert("Payment succeeded, but we couldn't update the server. Don't worry, your money is safe. Please contact support.");
+            fetchBookings(); // Fetch anyway, sometimes the webhook catches it
           }
         },
         prefill: { name: orderData.customerName, email: orderData.customerEmail, contact: orderData.customerPhone },
@@ -95,7 +100,6 @@ export default function MyBookings() {
   const handleConfirmCancel = async () => {
     if (!cancelOtp || cancelOtp.length < 4) return alert("Please enter a valid OTP.");
     setIsSubmittingCancel(true);
-    
     try {
       await BookingAPI.confirmCancel(cancellingBookingId, cancelOtp);
       setCancelMessage("Booking successfully cancelled.");
@@ -112,28 +116,95 @@ export default function MyBookings() {
     }
   };
 
+  // BEAUTIFIED INVOICE HTML
   const printBill = (booking) => {
     const printWindow = window.open('', '_blank');
+    const servicePrice = booking.price || booking.serviceOffering?.price || 0;
+    const platformFee = 50;
+    const totalPaid = servicePrice + platformFee;
+    const txnId = booking.transectionId || booking.transactionId || 'Awaiting Sync';
+
     printWindow.document.write(`
       <html>
         <head>
           <title>NearEase Invoice #${booking.id}</title>
           <style>
-            body { font-family: 'Inter', sans-serif; padding: 40px; color: #333; }
-            .header { text-align: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
-            .logo { font-size: 28px; font-weight: 900; color: #4f46e5; margin: 0; }
-            .row { display: flex; justify-content: space-between; margin-bottom: 10px; }
-            .total { font-size: 20px; font-weight: bold; border-top: 2px solid #eee; padding-top: 15px; margin-top: 20px; }
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; line-height: 1.6; max-width: 800px; margin: 0 auto;}
+            .header { border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end;}
+            .logo { font-size: 32px; font-weight: 900; color: #4f46e5; margin: 0; }
+            .invoice-title { text-transform: uppercase; color: #888; font-weight: bold; letter-spacing: 2px;}
+            .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
+            .details-box { background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #eee;}
+            table { w-full; border-collapse: collapse; margin-bottom: 30px; width: 100%; }
+            th { text-align: left; padding: 12px; border-bottom: 2px solid #ddd; color: #666; }
+            td { padding: 12px; border-bottom: 1px solid #eee; }
+            .totals { text-align: right; margin-left: auto; width: 300px; }
+            .totals-row { display: flex; justify-content: space-between; padding: 8px 0; }
+            .grand-total { font-size: 24px; font-weight: bold; color: #4f46e5; border-top: 2px solid #ddd; padding-top: 15px; margin-top: 10px;}
+            .footer { text-align: center; color: #888; font-size: 14px; margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px;}
           </style>
         </head>
         <body>
-          <div class="header"><h1 class="logo">NearEase</h1><p>Official Service Invoice</p></div>
-          <div class="row"><strong>Order ID:</strong> <span>#${booking.id}</span></div>
-          <div class="row"><strong>Date:</strong> <span>${new Date(booking.scheduledTime).toLocaleString()}</span></div>
-          <div class="row"><strong>Service:</strong> <span>${booking.ServiceName || 'Service'}</span></div>
-          <div class="row"><strong>Provider:</strong> <span>${booking.provider?.name || 'N/A'}</span></div>
-          <div class="row"><strong>Location:</strong> <span>${booking.workLocation}</span></div>
-          <div class="row total"><strong>Total Paid:</strong> <span>₹${booking.price || 0}</span></div>
+          <div class="header">
+            <div>
+              <h1 class="logo">NearEase</h1>
+              <p style="margin:5px 0 0 0; color:#666;">Official Service Invoice</p>
+            </div>
+            <div class="invoice-title">INVOICE #${booking.id}</div>
+          </div>
+
+          <div class="details-grid">
+            <div class="details-box">
+              <strong>Billed To:</strong><br/>
+              ${booking.customer?.firstName} ${booking.customer?.lastName}<br/>
+              ${booking.workLocation}
+            </div>
+            <div class="details-box">
+              <strong>Service Details:</strong><br/>
+              <strong>Date:</strong> ${new Date(booking.scheduledTime).toLocaleString()}<br/>
+              <strong>Provider:</strong> ${booking.provider?.name || 'N/A'}<br/>
+              <strong>Transaction ID:</strong> <span style="font-family: monospace;">${txnId}</span>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th style="text-align:right;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${booking.ServiceName || booking.serviceOffering?.name || 'Professional Service'}</td>
+                <td style="text-align:right;">₹${servicePrice}</td>
+              </tr>
+              <tr>
+                <td>Platform Escrow & Safety Fee</td>
+                <td style="text-align:right;">₹${platformFee}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div class="totals-row">
+              <span>Subtotal:</span>
+              <span>₹${servicePrice}</span>
+            </div>
+            <div class="totals-row">
+              <span>Platform Fee:</span>
+              <span>₹${platformFee}</span>
+            </div>
+            <div class="totals-row grand-total">
+              <span>Total Paid:</span>
+              <span>₹${totalPaid}</span>
+            </div>
+          </div>
+
+          <div class="footer">
+            Thank you for choosing NearEase.<br/>
+            This is a computer-generated invoice and requires no signature.
+          </div>
         </body>
       </html>
     `);
@@ -141,7 +212,6 @@ export default function MyBookings() {
     printWindow.print();
   };
 
-  // --- DELETE LOGIC ---
   const handleDeleteCard = (id) => {
     if(window.confirm("Are you sure you want to delete this booking from your view?")) {
       const updated = [...hiddenIds, id];
@@ -168,19 +238,20 @@ export default function MyBookings() {
         <div className="space-y-6">
           {visibleBookings.map((booking) => {
             const isPast = new Date(booking.scheduledTime) < new Date();
+            const servicePrice = booking.price || booking.serviceOffering?.price || 0;
+            const totalWithFee = servicePrice + 50;
+
+            // Normalize Note Field 
+            const note = booking.CostumerRequest || booking.customerRequest || booking.note;
 
             return (
               <div key={booking.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all hover:shadow-md relative">
                 
-                {/* --- PERMANENT DELETE ICON --- */}
-                <button 
-                  onClick={() => handleDeleteCard(booking.id)} 
-                  className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors p-2 bg-red-50 hover:bg-red-100 rounded-full shadow-sm z-10"
-                  title="Delete from view"
-                >
+                <button onClick={() => handleDeleteCard(booking.id)} className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors p-2 bg-red-50 hover:bg-red-100 rounded-full shadow-sm z-10" title="Delete from view">
                   <Trash2 size={18} />
                 </button>
 
+                {/* --- SMART STATUS BANNERS --- */}
                 {booking.bookingStatus === "PENDING" && !isPast && (
                   <div className="bg-yellow-50 text-yellow-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-yellow-100">
                     <Clock size={16} /> Request sent. Waiting for provider approval.
@@ -191,14 +262,24 @@ export default function MyBookings() {
                     <AlertCircle size={16} /> Request Expired. The scheduled time has passed without provider approval.
                   </div>
                 )}
-                {booking.bookingStatus === "CONFIRMED" && (
-                  <div className="bg-blue-50 text-blue-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-blue-100">
-                    <CheckCircle size={16} /> Your service request has been accepted! Please complete payment to secure your slot.
+                
+                {/* AFTER PAYMENT GREEN BADGE */}
+                {booking.bookingStatus === "CONFIRMED" && booking.paymentStatus === "PAID_TO_PLATFORM" && (
+                  <div className="bg-emerald-50 text-emerald-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-emerald-100">
+                    <ShieldCheck size={16} /> Payment secured in Escrow. Waiting for provider to complete the job.
                   </div>
                 )}
+                
+                {/* BEFORE PAYMENT BLUE BADGE */}
+                {booking.bookingStatus === "CONFIRMED" && booking.paymentStatus !== "PAID_TO_PLATFORM" && (
+                  <div className="bg-blue-50 text-blue-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-blue-100">
+                    <CheckCircle size={16} /> Request accepted! Please complete payment to secure your slot.
+                  </div>
+                )}
+
                 {booking.bookingStatus === "COMPLETED" && (
                   <div className="bg-green-50 text-green-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-green-100">
-                    <CheckCircle size={16} /> The service has been completed.
+                    <CheckCircle size={16} /> The service has been completed successfully.
                   </div>
                 )}
                 {booking.bookingStatus === "REJECTED" && (
@@ -215,12 +296,12 @@ export default function MyBookings() {
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4 pr-12">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{booking.ServiceName || "Service Booking"}</h3>
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{booking.ServiceName || booking.serviceOffering?.name || "Service Booking"}</h3>
                       <p className="text-sm text-gray-500 font-mono mt-1">Booking ID: #{booking.id}</p>
                     </div>
                     <div className="text-right">
-                       <p className="text-sm text-gray-500 font-medium mb-1">Total Price</p>
-                       <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">₹{booking.price || 0}</p>
+                       <p className="text-sm text-gray-500 font-medium mb-1">Total Estimated</p>
+                       <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">₹{totalWithFee}</p>
                     </div>
                   </div>
 
@@ -234,28 +315,31 @@ export default function MyBookings() {
                       <span><span className="block font-semibold text-gray-900 dark:text-gray-100">Location</span>{booking.workLocation}</span>
                     </p>
                     
-                    {(booking.CostumerRequest || booking.customerRequest) && (
+                    {/* DISPLAY CUSTOMER NOTE */}
+                    {note && (
                       <p className="text-gray-600 dark:text-gray-300 flex items-start gap-2 md:col-span-2">
                         <FileText className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                        <span><span className="block font-semibold text-gray-900 dark:text-gray-100">Your Note</span>{booking.CostumerRequest || booking.customerRequest}</span>
+                        <span><span className="block font-semibold text-gray-900 dark:text-gray-100">Your Note</span>{note}</span>
                       </p>
                     )}
                   </div>
 
                   <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    
                     {booking.bookingStatus === "PENDING" && !isPast && (
                       <button onClick={() => handleInitiateCancel(booking.id)} className="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors">
                         Cancel Booking
                       </button>
                     )}
 
-                    {booking.bookingStatus === "CONFIRMED" && !isPast && (
+                    {/* ONLY SHOW PAY NOW IF IT HASN'T BEEN PAID YET */}
+                    {booking.bookingStatus === "CONFIRMED" && booking.paymentStatus !== "PAID_TO_PLATFORM" && !isPast && (
                       <>
                         <button onClick={() => handleInitiateCancel(booking.id)} className="text-gray-500 hover:text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors">
                           Cancel
                         </button>
                         <button onClick={() => handlePayment(booking)} className="bg-indigo-600 text-white hover:bg-indigo-700 px-6 py-2 rounded-lg font-bold transition-all shadow-md flex items-center gap-2 transform hover:-translate-y-0.5">
-                          <DollarSign size={18} /> Pay Now to Secure Booking
+                          <DollarSign size={18} /> Pay Now (₹{totalWithFee})
                         </button>
                       </>
                     )}
@@ -281,9 +365,11 @@ export default function MyBookings() {
         </div>
       )}
 
+      {/* CANCELLATION MODAL LOGIC REMAINS THE SAME */}
       {cancellingBookingId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">
+           {/* ... existing modal code ... */}
+           <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">
             <div className="absolute -top-20 -left-20 w-40 h-40 bg-red-500 rounded-full blur-3xl opacity-20"></div>
 
             {cancelMessage ? (

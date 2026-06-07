@@ -55,10 +55,12 @@ export const PaymentAPI = {
   },
 
   // 2. Notify backend of payment success (Customer Flow)
-  confirmPaymentSuccess: async (bookingId) => {
+  confirmPaymentSuccess: async (bookingId, paymentDetails = {}) => {
     return fetchWithAuth(`${BASE_URL}/mock-success/${bookingId}`, { 
       method: "POST", 
-      headers: getHeaders() 
+      headers: getHeaders(),
+      // Send the Razorpay Payment ID to the backend
+      body: JSON.stringify(paymentDetails) 
     });
   },
 

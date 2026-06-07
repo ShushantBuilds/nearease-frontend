@@ -16,13 +16,24 @@ export default function ProviderDashboard() {
   
   const [hiddenIds, setHiddenIds] = useState(() => JSON.parse(localStorage.getItem("hiddenProviderBookings") || "[]"));
   
-  // --- OTP & IMAGE MODAL STATE ---
+  // OTP Modal State
   const [completingJobId, setCompletingJobId] = useState(null);
   const [otpCode, setOtpCode] = useState("");
   const [beforeImage, setBeforeImage] = useState(null);
   const [afterImage, setAfterImage] = useState(null);
   const [isSubmittingOtp, setIsSubmittingOtp] = useState(false);
   const [completionMessage, setCompletionMessage] = useState("");
+
+  // DUMMY GRAPH DATA (You can link this to backend data later)
+  const mockGraphData = [
+    { day: "Mon", height: "40%", amount: 400 },
+    { day: "Tue", height: "70%", amount: 700 },
+    { day: "Wed", height: "30%", amount: 300 },
+    { day: "Thu", height: "90%", amount: 900 },
+    { day: "Fri", height: "50%", amount: 500 },
+    { day: "Sat", height: "100%", amount: 1000 },
+    { day: "Sun", height: "60%", amount: 600 }
+  ];
 
   useEffect(() => { refreshDashboardData(); }, []);
 
@@ -62,18 +73,16 @@ export default function ProviderDashboard() {
       await BookingAPI.sendBookingOtp(bookingId);
       setCompletingJobId(bookingId);
     } catch (error) {
-      alert(error.message || "Failed to send OTP to the customer. Please try again.");
+      alert(error.message || "Failed to send OTP to the customer.");
     }
   };
 
-  // --- THE FIX: Build FormData with OTP and Images ---
   const handleOtpSubmit = async () => {
     if (!otpCode || otpCode.length < 4) return alert("Please enter a valid OTP.");
     setIsSubmittingOtp(true);
     
     try {
       const formData = new FormData();
-      // Must match the exact keys from the Postman screenshot
       formData.append("otp", otpCode);
       if (beforeImage) formData.append("beforeImage", beforeImage);
       if (afterImage) formData.append("afterImage", afterImage);
@@ -155,9 +164,25 @@ export default function ProviderDashboard() {
 
       {activeTab === "earnings" && (
         <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm animate-in fade-in">
-          <div className="flex items-center gap-3 mb-6"><TrendingUp className="text-indigo-600" /><h2 className="text-xl font-bold dark:text-white">Earnings History</h2></div>
-          <div className="h-64 bg-gray-50 dark:bg-gray-900/50 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-400">
-            [ Earnings Graph Integration Coming Soon ]
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3"><TrendingUp className="text-indigo-600" /><h2 className="text-xl font-bold dark:text-white">Earnings History</h2></div>
+            <span className="text-sm bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full font-bold text-gray-600 dark:text-gray-300">This Week</span>
+          </div>
+          
+          {/* CUSTOM TAILWIND BAR CHART */}
+          <div className="h-64 flex items-end justify-between gap-2 px-2 md:px-10 pb-6 border-b border-gray-100 dark:border-gray-700 relative">
+             <div className="absolute left-0 top-0 h-full border-l border-gray-100 dark:border-gray-700 pointer-events-none"></div>
+             
+             {mockGraphData.map((data, index) => (
+                <div key={index} className="flex flex-col items-center flex-1 group">
+                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity mb-2">₹{data.amount}</span>
+                  <div 
+                     className="w-full max-w-[40px] bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-xl transition-all duration-700 ease-in-out hover:brightness-110 shadow-sm"
+                     style={{ height: data.height }}
+                  ></div>
+                  <span className="text-xs text-gray-500 font-medium mt-3">{data.day}</span>
+                </div>
+             ))}
           </div>
         </div>
       )}
@@ -171,70 +196,68 @@ export default function ProviderDashboard() {
           ) : (
             visibleRequests
               .filter(job => activeTab === "completed" ? job.bookingStatus === "COMPLETED" : job.bookingStatus !== "COMPLETED")
-              .map((job) => (
-              <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 shadow-sm p-6 relative">
-                
-                <button 
-                  onClick={() => handleDeleteCard(job.id)} 
-                  className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors p-2 bg-red-50 hover:bg-red-100 rounded-full shadow-sm"
-                  title="Delete from dashboard"
-                >
-                  <Trash2 size={18} />
-                </button>
+              .map((job) => {
+                const note = job.CostumerRequest || job.customerRequest || job.note;
+                const totalCost = (job.price || job.serviceOffering?.price || 0) + 50;
 
-                <div className="flex justify-between items-start mb-4 pr-12">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">{job.ServiceName || "Service Requested"}</h3>
-                    <p className="text-sm font-mono text-gray-500 mt-1">Booking ID: #{job.id}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">₹{job.price || 0}</p>
-                    <span className="inline-block mt-1 px-3 py-1 text-xs font-bold rounded-full uppercase bg-gray-100 text-gray-800">
-                      {job.bookingStatus}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl mb-4 border border-gray-100 dark:border-gray-700">
-                  <p className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"><Calendar className="w-4 h-4 text-gray-400 mt-0.5" /> <span><strong>Time:</strong> <br/>{new Date(job.scheduledTime).toLocaleString()}</span></p>
-                  <p className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"><MapPin className="w-4 h-4 text-gray-400 mt-0.5" /> <span><strong>Location:</strong> <br/>{job.workLocation}</span></p>
-                  <p className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"><User className="w-4 h-4 text-gray-400 mt-0.5" /> <span><strong>Customer:</strong> <br/>{job.customer?.firstName} {job.customer?.lastName}</span></p>
+                return (
+                <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 shadow-sm p-6 relative">
                   
-                  {(job.CostumerRequest || job.customerRequest) && (
-                    <p className="flex items-start gap-2 text-sm text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg md:col-span-2 mt-2">
-                      <FileText className="w-4 h-4 mt-0.5 shrink-0" /> 
-                      <span><strong>Customer's Note:</strong> <br/>{job.CostumerRequest || job.customerRequest}</span>
-                    </p>
+                  <button onClick={() => handleDeleteCard(job.id)} className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors p-2 bg-red-50 hover:bg-red-100 rounded-full shadow-sm" title="Delete from dashboard">
+                    <Trash2 size={18} />
+                  </button>
+
+                  <div className="flex justify-between items-start mb-4 pr-12">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{job.ServiceName || job.serviceOffering?.name || "Service Requested"}</h3>
+                      <p className="text-sm font-mono text-gray-500 mt-1">Booking ID: #{job.id}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">₹{totalCost}</p>
+                      <span className="inline-block mt-1 px-3 py-1 text-xs font-bold rounded-full uppercase bg-gray-100 text-gray-800">
+                        {job.bookingStatus}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl mb-4 border border-gray-100 dark:border-gray-700">
+                    <p className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"><Calendar className="w-4 h-4 text-gray-400 mt-0.5" /> <span><strong>Time:</strong> <br/>{new Date(job.scheduledTime).toLocaleString()}</span></p>
+                    <p className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"><MapPin className="w-4 h-4 text-gray-400 mt-0.5" /> <span><strong>Location:</strong> <br/>{job.workLocation}</span></p>
+                    <p className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"><User className="w-4 h-4 text-gray-400 mt-0.5" /> <span><strong>Customer:</strong> <br/>{job.customer?.firstName} {job.customer?.lastName}</span></p>
+                    
+                    {note && (
+                      <p className="flex items-start gap-2 text-sm text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg md:col-span-2 mt-2">
+                        <FileText className="w-4 h-4 mt-0.5 shrink-0" /> 
+                        <span><strong>Customer's Note:</strong> <br/>{note}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {job.bookingStatus === "PENDING" && (
+                    <div className="flex gap-4 pt-2">
+                      <button onClick={() => handleStatusChange(job.id, "ACCEPTED")} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition">Accept Request</button>
+                      <button onClick={() => handleStatusChange(job.id, "REJECTED")} className="flex-1 bg-red-50 text-red-600 py-3 rounded-xl font-bold hover:bg-red-100 transition">Reject Request</button>
+                    </div>
+                  )}
+
+                  {(job.bookingStatus === "CONFIRMED" || job.bookingStatus === "ACCEPTED") && (
+                    <div className="pt-2">
+                      <button onClick={() => handleInitiateCompletion(job.id)} className="w-full bg-green-500 text-white py-3.5 rounded-xl font-bold hover:bg-green-600 transition flex justify-center items-center gap-2 shadow-sm">
+                        <CheckCircle size={20} /> Mark as Complete
+                      </button>
+                    </div>
                   )}
                 </div>
-
-                {job.bookingStatus === "PENDING" && (
-                  <div className="flex gap-4 pt-2">
-                    <button onClick={() => handleStatusChange(job.id, "ACCEPTED")} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition">
-                      Accept Request
-                    </button>
-                    <button onClick={() => handleStatusChange(job.id, "REJECTED")} className="flex-1 bg-red-50 text-red-600 py-3 rounded-xl font-bold hover:bg-red-100 transition">
-                      Reject Request
-                    </button>
-                  </div>
-                )}
-
-                {(job.bookingStatus === "CONFIRMED" || job.bookingStatus === "ACCEPTED") && (
-                  <div className="pt-2">
-                    <button onClick={() => handleInitiateCompletion(job.id)} className="w-full bg-green-500 text-white py-3.5 rounded-xl font-bold hover:bg-green-600 transition flex justify-center items-center gap-2 shadow-sm">
-                      <CheckCircle size={20} /> Mark as Complete
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))
+              )})
           )}
         </div>
       )}
       
+      {/* COMPLETION MODAL */}
       {completingJobId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">
+           {/* ... existing modal code ... */}
+           <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">
             <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500 rounded-full blur-3xl opacity-20"></div>
 
             {completionMessage ? (
@@ -256,23 +279,14 @@ export default function ProviderDashboard() {
                   className="w-full px-4 py-4 text-center text-2xl tracking-[0.5em] font-bold border-2 border-white/50 bg-white/50 dark:bg-gray-800/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4 shadow-inner" maxLength={6}
                 />
 
-                {/* --- NEW FILE UPLOADS --- */}
                 <div className="grid grid-cols-2 gap-3 mb-6 text-left">
                   <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-xl border border-white/50">
                     <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1"><ImageIcon size={12}/> Before Image</label>
-                    <input 
-                      type="file" accept="image/*"
-                      onChange={(e) => setBeforeImage(e.target.files[0])} 
-                      className="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" 
-                    />
+                    <input type="file" accept="image/*" onChange={(e) => setBeforeImage(e.target.files[0])} className="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                   </div>
                   <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-xl border border-white/50">
                     <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1"><ImageIcon size={12}/> After Image</label>
-                    <input 
-                      type="file" accept="image/*"
-                      onChange={(e) => setAfterImage(e.target.files[0])} 
-                      className="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" 
-                    />
+                    <input type="file" accept="image/*" onChange={(e) => setAfterImage(e.target.files[0])} className="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                   </div>
                 </div>
 

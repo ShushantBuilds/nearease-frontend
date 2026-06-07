@@ -17,20 +17,23 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
 
     setIsSubmitting(true);
     try {
-      // Assuming your backend expects the booking ID, rating, and comment
+      // THE FIX: Provide multiple alias formats to ensure Spring Boot catches it, 
+      // and map 'comment' to 'review' in case the backend uses that field name.
       await UserAPI.submitReview({
         bookingId: booking.id,
+        booking_id: booking.id, // Fallback alias
         providerId: booking.provider?.id,
-        serviceOfferingId: booking.serviceOffering?.id,
+        provider_id: booking.provider?.id, // Fallback alias
         rating: rating,
-        comment: comment
+        comment: comment,
+        review: comment // Fallback alias
       });
 
       setIsSuccess(true);
       setTimeout(() => {
-        onSuccess(booking.id); // Triggers a refresh in MyBookings
+        onSuccess(booking.id); 
         handleClose();
-      }, 2000); // Close automatically after 2 seconds of success
+      }, 2000); 
     } catch (err) {
       alert("Failed to submit review. Please try again.");
       setIsSubmitting(false);
