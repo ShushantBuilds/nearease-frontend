@@ -21,21 +21,18 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
 
     setIsSubmitting(true);
     try {
-      // THE FIX: Securely extract the Provider ID from the nested object!
-      const finalProviderId = booking.provider?.id || booking.serviceOffering?.provider?.id;
-
+      // THE FIX: A clean JSON payload. 
+      // We pass both standard naming conventions to ensure the Java DTO catches it.
       const payload = {
         bookingId: booking.id,
-        booking_id: booking.id,
-        providerId: finalProviderId,
-        provider_id: finalProviderId,
-        serviceOfferingId: booking.serviceOffering?.id,
+        booking_id: booking.id, 
         rating: rating,
         comment: comment,
         review: comment
       };
 
-      await UserAPI.submitReview(booking.id, payload);
+      // Call the API with just the payload
+      await UserAPI.submitReview(payload);
 
       setIsSuccess(true);
       setTimeout(() => {
@@ -43,8 +40,7 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
         handleClose();
       }, 2000); 
     } catch (err) {
-      alert("Failed to submit review. Please check console or try again.");
-      console.error(err);
+      alert(err.message || "Failed to submit review. Please try again.");
       setIsSubmitting(false);
     }
   };

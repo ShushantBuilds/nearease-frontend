@@ -105,13 +105,26 @@ export const UserAPI = {
     });
   },
 
- submitReview: async (bookingId, reviewData) => {
-    const REVIEW_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080") + "/api/reviews/new/review";
-    return fetchWithAuth(`${REVIEW_URL}?bookingId=${bookingId}`, {
+ // THE FIX: Reverted to standard application/json so Spring Boot can map the DTO
+  submitReview: async (reviewData) => {
+    const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+    const token = getAuthToken(); // Assuming you have this helper from before
+    
+    const res = await fetch(`${BASE_URL}/api/reviews/new/review`, {
       method: "POST",
-      headers: getHeaders(),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": token ? `Bearer ${token}` : ""
+      },
       body: JSON.stringify(reviewData)
     });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || `Server rejected request: ${res.status}`);
+    }
+    
+    return res.text().then(text => text ? JSON.parse(text) : {});
   },
 
   getMyReviews: async () => {
