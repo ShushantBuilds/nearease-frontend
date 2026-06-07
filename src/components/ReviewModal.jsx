@@ -11,26 +11,30 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
 
   if (!isOpen || !booking) return null;
 
+  // THE FIX: Robustly extract the provider's name to display in the UI
+  const providerName = booking.provider?.name || booking.serviceOffering?.provider?.name || 
+    (booking.serviceOffering?.provider?.user?.firstName ? `${booking.serviceOffering.provider.user.firstName}` : "the provider");
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (rating === 0) return alert("Please select a star rating!");
 
     setIsSubmitting(true);
     try {
-      // THE FIX: "Brute force" payload with multiple ID aliases just in case the backend needs it
+      // THE FIX: Securely extract the Provider ID from the nested object!
+      const finalProviderId = booking.provider?.id || booking.serviceOffering?.provider?.id;
+
       const payload = {
         bookingId: booking.id,
         booking_id: booking.id,
-        id: booking.id,
-        booking: { id: booking.id }, // For nested DTOs
-        providerId: booking.provider?.id,
+        providerId: finalProviderId,
+        provider_id: finalProviderId,
         serviceOfferingId: booking.serviceOffering?.id,
         rating: rating,
         comment: comment,
         review: comment
       };
 
-      // Pass the booking.id as the first parameter to construct the URL query param
       await UserAPI.submitReview(booking.id, payload);
 
       setIsSuccess(true);
@@ -67,7 +71,7 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
             <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Rate your experience</h2>
-                <p className="text-sm text-gray-500">How was the service from {booking.provider?.name || "the provider"}?</p>
+                <p className="text-sm text-gray-500">How was the service from {providerName}?</p>
               </div>
               <button onClick={handleClose} className="p-2 text-gray-400 hover:text-gray-600 bg-white dark:bg-gray-700 rounded-full shadow-sm transition">
                 <X size={18} />

@@ -105,8 +105,9 @@ export const UserAPI = {
     });
   },
 
-  submitReview: async (bookingId, reviewData) => {
-    return fetchWithAuth(`${BASE_URL}/reviews/new/review?bookingId=${bookingId}`, {
+ submitReview: async (bookingId, reviewData) => {
+    const REVIEW_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080") + "/api/reviews/new/review";
+    return fetchWithAuth(`${REVIEW_URL}?bookingId=${bookingId}`, {
       method: "POST",
       headers: getHeaders(),
       body: JSON.stringify(reviewData)
