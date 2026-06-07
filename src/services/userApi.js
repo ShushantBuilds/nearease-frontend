@@ -105,10 +105,10 @@ export const UserAPI = {
     });
   },
 
-  submitReview: async (reviewData) => {
-    return fetchWithAuth(`${BASE_URL}/api/reviews/new/review`, {
-      method: "POST", 
-      headers: getHeaders(), 
+  submitReview: async (bookingId, reviewData) => {
+    return fetchWithAuth(`${BASE_URL}/reviews/new/review?bookingId=${bookingId}`, {
+      method: "POST",
+      headers: getHeaders(),
       body: JSON.stringify(reviewData)
     });
   },

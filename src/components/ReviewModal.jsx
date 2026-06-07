@@ -17,17 +17,21 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
 
     setIsSubmitting(true);
     try {
-      // THE FIX: Provide multiple alias formats to ensure Spring Boot catches it, 
-      // and map 'comment' to 'review' in case the backend uses that field name.
-      await UserAPI.submitReview({
+      // THE FIX: "Brute force" payload with multiple ID aliases just in case the backend needs it
+      const payload = {
         bookingId: booking.id,
-        booking_id: booking.id, // Fallback alias
+        booking_id: booking.id,
+        id: booking.id,
+        booking: { id: booking.id }, // For nested DTOs
         providerId: booking.provider?.id,
-        provider_id: booking.provider?.id, // Fallback alias
+        serviceOfferingId: booking.serviceOffering?.id,
         rating: rating,
         comment: comment,
-        review: comment // Fallback alias
-      });
+        review: comment
+      };
+
+      // Pass the booking.id as the first parameter to construct the URL query param
+      await UserAPI.submitReview(booking.id, payload);
 
       setIsSuccess(true);
       setTimeout(() => {
@@ -35,7 +39,8 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
         handleClose();
       }, 2000); 
     } catch (err) {
-      alert("Failed to submit review. Please try again.");
+      alert("Failed to submit review. Please check console or try again.");
+      console.error(err);
       setIsSubmitting(false);
     }
   };
@@ -70,7 +75,6 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              {/* Interactive Star Rating */}
               <div className="flex flex-col items-center justify-center space-y-2">
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -98,7 +102,6 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
                 </span>
               </div>
 
-              {/* Written Review */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Write a Review</label>
                 <textarea 

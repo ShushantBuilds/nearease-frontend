@@ -16,7 +16,6 @@ export default function ProviderDashboard() {
   
   const [hiddenIds, setHiddenIds] = useState(() => JSON.parse(localStorage.getItem("hiddenProviderBookings") || "[]"));
   
-  // OTP Modal State
   const [completingJobId, setCompletingJobId] = useState(null);
   const [otpCode, setOtpCode] = useState("");
   const [beforeImage, setBeforeImage] = useState(null);
@@ -24,7 +23,6 @@ export default function ProviderDashboard() {
   const [isSubmittingOtp, setIsSubmittingOtp] = useState(false);
   const [completionMessage, setCompletionMessage] = useState("");
 
-  // DUMMY GRAPH DATA (You can link this to backend data later)
   const mockGraphData = [
     { day: "Mon", height: "40%", amount: 400 },
     { day: "Tue", height: "70%", amount: 700 },
@@ -122,7 +120,6 @@ export default function ProviderDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 relative">
-      
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Provider Workspace</h1>
         <button onClick={() => setIsAddModalOpen(true)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center gap-2 shadow-sm">
@@ -169,7 +166,6 @@ export default function ProviderDashboard() {
             <span className="text-sm bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full font-bold text-gray-600 dark:text-gray-300">This Week</span>
           </div>
           
-          {/* CUSTOM TAILWIND BAR CHART */}
           <div className="h-64 flex items-end justify-between gap-2 px-2 md:px-10 pb-6 border-b border-gray-100 dark:border-gray-700 relative">
              <div className="absolute left-0 top-0 h-full border-l border-gray-100 dark:border-gray-700 pointer-events-none"></div>
              
@@ -198,7 +194,9 @@ export default function ProviderDashboard() {
               .filter(job => activeTab === "completed" ? job.bookingStatus === "COMPLETED" : job.bookingStatus !== "COMPLETED")
               .map((job) => {
                 const note = job.CostumerRequest || job.customerRequest || job.note;
-                const totalCost = (job.price || job.serviceOffering?.price || 0) + 50;
+                
+                // THE FIX: Provide the exact, pure base price without any added platform fees.
+                const providerCost = job.price || job.serviceOffering?.price || 0;
 
                 return (
                 <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 shadow-sm p-6 relative">
@@ -213,7 +211,7 @@ export default function ProviderDashboard() {
                       <p className="text-sm font-mono text-gray-500 mt-1">Booking ID: #{job.id}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">₹{totalCost}</p>
+                      <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">₹{providerCost}</p>
                       <span className="inline-block mt-1 px-3 py-1 text-xs font-bold rounded-full uppercase bg-gray-100 text-gray-800">
                         {job.bookingStatus}
                       </span>
@@ -253,10 +251,8 @@ export default function ProviderDashboard() {
         </div>
       )}
       
-      {/* COMPLETION MODAL */}
       {completingJobId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-           {/* ... existing modal code ... */}
            <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">
             <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500 rounded-full blur-3xl opacity-20"></div>
 
