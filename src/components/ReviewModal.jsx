@@ -20,28 +20,22 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
 
     setIsSubmitting(true);
     try {
-      const finalProviderId = booking.provider?.id || booking.serviceOffering?.provider?.id;
-
-      // THE FIX: The Ultimate Flat Payload
       const payload = {
-        bookingId: booking.id,
-        booking_id: booking.id, // Fallback
-        providerId: finalProviderId,
-        rating: parseInt(rating), // Enforce strict integer type
-        comment: comment,
-        review: comment // Fallback alias
+        bookingId: booking.id,   // Standard camelCase
+        bookingID: booking.id,   // Matches your original DTO field
+        rating: parseInt(rating),
+        comment: comment
       };
 
-      // Pass the booking.id as the first parameter for the new URL bridge
-      await UserAPI.submitReview(booking.id, payload);
+      await UserAPI.submitReview(payload); // Ensure submitReview sends this payload
 
       setIsSuccess(true);
       setTimeout(() => {
-        onSuccess(booking.id); 
+        onSuccess(booking.id);
         handleClose();
-      }, 2000); 
+      }, 2000);
     } catch (err) {
-      alert(err.message || "Failed to submit review. Please try again.");
+      alert("Failed to submit review. Server said: " + err.message);
       setIsSubmitting(false);
     }
   };
