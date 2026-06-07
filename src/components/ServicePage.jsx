@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Star, MapPin, ArrowLeft, Send, Phone, MessageCircle, Flashlight } from "lucide-react";
+import { Star, MapPin, ArrowLeft, Phone, MessageCircle, Flashlight } from "lucide-react";
 import PortfolioGallery from "./PortfolioGallery";
+import ReviewList from "./ReviewList"; // IMPORT THE REVIEW LIST
 
 export default function ServicePage({ service, onBack, onProceedToCheckout }) {
   const [previewImage, setPreviewImage] = useState(0);
-  const [reviewText, setReviewText] = useState("");
 
   // Safely extract images whether they come as a single string or an array from Spring Boot
   const images = service?.images?.length > 0 
@@ -12,12 +12,6 @@ export default function ServicePage({ service, onBack, onProceedToCheckout }) {
     : (service?.imageUrl ? [service.imageUrl] : ["https://via.placeholder.com/800x400?text=No+Image"]);
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
-
-  const submitReview = () => {
-    if(!reviewText) return alert("Please write a review first.");
-    alert("Review submitted successfully! Pending approval.");
-    setReviewText("");
-  };
 
   if (!service) return null;
 
@@ -45,12 +39,9 @@ export default function ServicePage({ service, onBack, onProceedToCheckout }) {
             )}
           </div>
 
+          {/* THE FIX: Replaced the fake submission box with the real Review List */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Review the Service</h3>
-            <textarea value={reviewText} onChange={(e) => setReviewText(e.target.value)} placeholder="How was your experience with this provider?" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 outline-none focus:border-indigo-500 transition min-h-[120px] mb-4 dark:text-white placeholder-gray-400"></textarea>
-            <button onClick={submitReview} className="flex items-center gap-2 bg-gray-900 dark:bg-indigo-600 hover:bg-gray-800 text-white font-bold py-2.5 px-6 rounded-xl transition cursor-pointer">
-              <Send size={16} /> Submit Review
-            </button>
+            <ReviewList providerId={service?.provider?.id} />
           </div>
         </div>
 
