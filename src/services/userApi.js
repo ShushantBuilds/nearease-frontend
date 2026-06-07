@@ -106,11 +106,25 @@ export const UserAPI = {
   },
 
  // THE FIX: Reverted to standard application/json so Spring Boot can map the DTO
-  submitReview: async (reviewData) => {
+  // --- THE FIX: Target the exact endpoint and use an Omni-Payload ---
+  submitReview: async (bookingId, reviewData) => {
     const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
-    const token = getAuthToken(); // Assuming you have this helper from before
     
-    const res = await fetch(`${BASE_URL}/api/reviews/new/review`, {
+    // Extract Token securely
+    let token = null;
+    const savedUser = localStorage.getItem("nearEaseUser");
+    if (savedUser) {
+      try { token = JSON.parse(savedUser).token; } catch (e) {}
+    }
+
+    // 1. Explicitly define the exact path to prevent payload-stripping redirects
+    const url = new URL(`${BASE_URL}/api/reviews/new/review`);
+    
+    // 2. Append bookingId as a URL parameter to bypass strict Spring Boot @RequestParam rules
+    url.searchParams.append("bookingId", bookingId);
+
+    // 3. Send standard JSON (with the token)
+    const res = await fetch(url.toString(), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

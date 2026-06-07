@@ -11,7 +11,6 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
 
   if (!isOpen || !booking) return null;
 
-  // THE FIX: Robustly extract the provider's name to display in the UI
   const providerName = booking.provider?.name || booking.serviceOffering?.provider?.name || 
     (booking.serviceOffering?.provider?.user?.firstName ? `${booking.serviceOffering.provider.user.firstName}` : "the provider");
 
@@ -21,18 +20,20 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
 
     setIsSubmitting(true);
     try {
-      // THE FIX: A clean JSON payload. 
-      // We pass both standard naming conventions to ensure the Java DTO catches it.
+      const finalProviderId = booking.provider?.id || booking.serviceOffering?.provider?.id;
+
+      // THE FIX: The Ultimate Flat Payload
       const payload = {
         bookingId: booking.id,
-        booking_id: booking.id, 
-        rating: rating,
+        booking_id: booking.id, // Fallback
+        providerId: finalProviderId,
+        rating: parseInt(rating), // Enforce strict integer type
         comment: comment,
-        review: comment
+        review: comment // Fallback alias
       };
 
-      // Call the API with just the payload
-      await UserAPI.submitReview(payload);
+      // Pass the booking.id as the first parameter for the new URL bridge
+      await UserAPI.submitReview(booking.id, payload);
 
       setIsSuccess(true);
       setTimeout(() => {
