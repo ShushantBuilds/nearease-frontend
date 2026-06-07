@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   Briefcase, DollarSign, Clock, CheckCircle, AlertCircle, MapPin, 
-  Calendar, User, Loader2, Plus, TrendingUp, XCircle, FileText, Trash2
+  Calendar, User, Loader2, Plus, TrendingUp, XCircle, FileText, Trash2, Image as ImageIcon
 } from "lucide-react";
 import { ProviderAPI } from "../services/providerApi";
 import { BookingAPI } from "../services/bookingApi";
@@ -14,12 +14,13 @@ export default function ProviderDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
-  // Soft Delete State
   const [hiddenIds, setHiddenIds] = useState(() => JSON.parse(localStorage.getItem("hiddenProviderBookings") || "[]"));
   
-  // OTP Modal State
+  // --- OTP & IMAGE MODAL STATE ---
   const [completingJobId, setCompletingJobId] = useState(null);
   const [otpCode, setOtpCode] = useState("");
+  const [beforeImage, setBeforeImage] = useState(null);
+  const [afterImage, setAfterImage] = useState(null);
   const [isSubmittingOtp, setIsSubmittingOtp] = useState(false);
   const [completionMessage, setCompletionMessage] = useState("");
 
@@ -65,13 +66,19 @@ export default function ProviderDashboard() {
     }
   };
 
+  // --- THE FIX: Build FormData with OTP and Images ---
   const handleOtpSubmit = async () => {
     if (!otpCode || otpCode.length < 4) return alert("Please enter a valid OTP.");
     setIsSubmittingOtp(true);
     
     try {
-      // THE FIX: Directly pass the otpCode string to match the updated API
-      await BookingAPI.completeBooking(completingJobId, otpCode);
+      const formData = new FormData();
+      // Must match the exact keys from the Postman screenshot
+      formData.append("otp", otpCode);
+      if (beforeImage) formData.append("beforeImage", beforeImage);
+      if (afterImage) formData.append("afterImage", afterImage);
+      
+      await BookingAPI.completeBooking(completingJobId, formData);
       
       setCompletionMessage("The Service has been completed.");
       setRequests(requests.map(req => req.id === completingJobId ? { ...req, bookingStatus: "COMPLETED" } : req));
@@ -79,6 +86,8 @@ export default function ProviderDashboard() {
       setTimeout(() => {
         setCompletingJobId(null);
         setOtpCode("");
+        setBeforeImage(null);
+        setAfterImage(null);
         setCompletionMessage("");
         refreshDashboardData(); 
       }, 2000);
@@ -90,7 +99,6 @@ export default function ProviderDashboard() {
     }
   };
 
-  // --- DELETE LOGIC ---
   const handleDeleteCard = (id) => {
     if(window.confirm("Are you sure you want to delete this booking from your dashboard?")) {
       const updated = [...hiddenIds, id];
@@ -99,7 +107,6 @@ export default function ProviderDashboard() {
     }
   };
 
-  // Filter out hidden cards
   const visibleRequests = requests.filter(r => !hiddenIds.includes(r.id));
 
   if (isLoading) return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="w-10 h-10 animate-spin text-indigo-600" /></div>;
@@ -167,7 +174,6 @@ export default function ProviderDashboard() {
               .map((job) => (
               <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 shadow-sm p-6 relative">
                 
-                {/* --- PERMANENT DELETE ICON --- */}
                 <button 
                   onClick={() => handleDeleteCard(job.id)} 
                   className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors p-2 bg-red-50 hover:bg-red-100 rounded-full shadow-sm"
@@ -240,14 +246,36 @@ export default function ProviderDashboard() {
               </div>
             ) : (
               <>
-                <button onClick={() => setCompletingJobId(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-white z-10"><XCircle size={24} /></button>
+                <button onClick={() => { setCompletingJobId(null); setBeforeImage(null); setAfterImage(null); }} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-white z-10"><XCircle size={24} /></button>
                 <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle className="text-indigo-600 dark:text-indigo-400 w-8 h-8" /></div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Complete Service</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">An OTP has been sent to the customer's email. Ask them for the 4-digit code to mark this job as done.</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Enter the customer's 4-digit OTP and upload proof of work.</p>
+                
                 <input 
                   type="text" placeholder="Enter 4-digit OTP" value={otpCode} onChange={(e) => setOtpCode(e.target.value)}
-                  className="w-full px-4 py-4 text-center text-2xl tracking-[0.5em] font-bold border-2 border-white/50 bg-white/50 dark:bg-gray-800/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-6 shadow-inner" maxLength={6}
+                  className="w-full px-4 py-4 text-center text-2xl tracking-[0.5em] font-bold border-2 border-white/50 bg-white/50 dark:bg-gray-800/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4 shadow-inner" maxLength={6}
                 />
+
+                {/* --- NEW FILE UPLOADS --- */}
+                <div className="grid grid-cols-2 gap-3 mb-6 text-left">
+                  <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-xl border border-white/50">
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1"><ImageIcon size={12}/> Before Image</label>
+                    <input 
+                      type="file" accept="image/*"
+                      onChange={(e) => setBeforeImage(e.target.files[0])} 
+                      className="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" 
+                    />
+                  </div>
+                  <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-xl border border-white/50">
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1"><ImageIcon size={12}/> After Image</label>
+                    <input 
+                      type="file" accept="image/*"
+                      onChange={(e) => setAfterImage(e.target.files[0])} 
+                      className="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" 
+                    />
+                  </div>
+                </div>
+
                 <button onClick={handleOtpSubmit} disabled={isSubmittingOtp} className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg flex justify-center items-center">
                   {isSubmittingOtp ? <Loader2 className="animate-spin w-5 h-5" /> : "Verify & Complete"}
                 </button>
