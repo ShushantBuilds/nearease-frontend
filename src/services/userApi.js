@@ -105,37 +105,32 @@ export const UserAPI = {
     });
   },
 
- // THE FIX: Reverted to standard application/json so Spring Boot can map the DTO
-  // --- THE FIX: Target the exact endpoint and use an Omni-Payload ---
-  submitReview: async (bookingId, reviewData) => {
-    const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
-    
-    // Extract Token securely
+ // --- THE FINAL FIX: Expects ONE argument (reviewData) and guarantees the JSON body is sent ---
+  submitReview: async (reviewData) => {
+    // Reconstruct the exact URL to avoid any BASE_URL trailing slash issues
+    const API_HOST = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+    const EXACT_URL = `${API_HOST}/api/reviews/new/review`;
+
+    // Safely extract the token
     let token = null;
-    const savedUser = localStorage.getItem("nearEaseUser");
-    if (savedUser) {
-      try { token = JSON.parse(savedUser).token; } catch (e) {}
-    }
+    try {
+      const userStr = localStorage.getItem("nearEaseUser");
+      if (userStr) token = JSON.parse(userStr).token;
+    } catch (e) {}
 
-    // 1. Explicitly define the exact path to prevent payload-stripping redirects
-    const url = new URL(`${BASE_URL}/api/reviews/new/review`);
-    
-    // 2. Append bookingId as a URL parameter to bypass strict Spring Boot @RequestParam rules
-    url.searchParams.append("bookingId", bookingId);
-
-    // 3. Send standard JSON (with the token)
-    const res = await fetch(url.toString(), {
+    // Send the strict JSON request
+    const res = await fetch(EXACT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": token ? `Bearer ${token}` : ""
       },
-      body: JSON.stringify(reviewData)
+      body: JSON.stringify(reviewData) // If reviewData is passed correctly, this will never be empty
     });
 
     if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.message || `Server rejected request: ${res.status}`);
+      const errorText = await res.text();
+      throw new Error(`Server Error ${res.status}: ${errorText}`);
     }
     
     return res.text().then(text => text ? JSON.parse(text) : {});

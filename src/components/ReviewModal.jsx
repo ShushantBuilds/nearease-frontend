@@ -20,20 +20,23 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
 
     setIsSubmitting(true);
     try {
+      // 1. Package the strict JSON payload
+      // We include both bookingId and bookingID to guarantee the Java DTO catches it
       const payload = {
-        bookingId: booking.id,   // Standard camelCase
-        bookingID: booking.id,   // Matches your original DTO field
+        bookingId: booking.id,
+        bookingID: booking.id, 
         rating: parseInt(rating),
         comment: comment
       };
 
-      await UserAPI.submitReview(payload); // Ensure submitReview sends this payload
+      // 2. Call the API with EXACTLY ONE argument!
+      await UserAPI.submitReview(payload);
 
       setIsSuccess(true);
       setTimeout(() => {
-        onSuccess(booking.id);
+        onSuccess(booking.id); 
         handleClose();
-      }, 2000);
+      }, 2000); 
     } catch (err) {
       alert("Failed to submit review. Server said: " + err.message);
       setIsSubmitting(false);
