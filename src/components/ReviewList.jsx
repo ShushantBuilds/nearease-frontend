@@ -69,9 +69,17 @@ export default function ReviewList({ providerId }) {
                 ))}
               </div>
             </div>
-            <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed italic">
-              "{review.comment}"
-            </p>
+            
+            {/* THE FIX: Only render quotes if comment actually exists! */}
+            {review.comment ? (
+               <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed italic">
+                 "{review.comment}"
+               </p>
+            ) : (
+               <p className="text-gray-400 dark:text-gray-500 text-sm italic">
+                 No written comment provided.
+               </p>
+            )}
           </div>
         ))}
       </div>

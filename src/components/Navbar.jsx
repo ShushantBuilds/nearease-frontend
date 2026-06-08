@@ -121,6 +121,10 @@ export default function Navbar({
                       <button onClick={() => { setActivePage("settings"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer">
                         <Edit size={18} /> Update Profile
                       </button>
+                      
+                      <button onClick={() => { setActivePage("my-reviews"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer">
+                        <Star size={18} /> My Reviews
+                      </button>
 
                       <button onClick={() => { setActivePage("add-service"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition cursor-pointer">
                         <PlusCircle size={18} /> Add Service
@@ -145,10 +149,6 @@ export default function Navbar({
 
                       <button onClick={() => { setActivePage("bookings"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer border-t border-gray-100 dark:border-gray-700">
                         <Calendar size={18} /> My Bookings
-                      </button>
-
-                      <button onClick={() => { setActivePage("my-reviews"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600 transition cursor-pointer">
-                        <Star size={18} /> My Reviews
                       </button>
 
                       <button onClick={() => { setActivePage("apply-provider"); setIsDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition cursor-pointer border-t border-gray-100 dark:border-gray-700">

@@ -8,9 +8,12 @@ export default function MyBookings() {
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedBookingForReview, setSelectedBookingForReview] = useState(null);
   
+  // THE FIX: Use LocalStorage to remember which bookings we've already reviewed
+  const [reviewedIds, setReviewedIds] = useState(() => JSON.parse(localStorage.getItem("nearEaseReviewedBookings") || "[]"));
   const [hiddenIds, setHiddenIds] = useState(() => JSON.parse(localStorage.getItem("hiddenCustomerBookings") || "[]"));
 
   const [cancellingBookingId, setCancellingBookingId] = useState(null);
@@ -18,9 +21,7 @@ export default function MyBookings() {
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
   const [cancelMessage, setCancelMessage] = useState("");
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
+  useEffect(() => { fetchBookings(); }, []);
 
   const fetchBookings = async () => {
     try {
@@ -122,10 +123,12 @@ export default function MyBookings() {
     const totalPaid = servicePrice + platformFee;
     const txnId = booking.transectionId || booking.transactionId || 'Awaiting Sync';
 
-    // THE FIX: Robustly extract Provider Name for Invoice
-    const providerName = booking.provider?.name || booking.serviceOffering?.provider?.name || 
-      (booking.serviceOffering?.provider?.user?.firstName ? 
-      `${booking.serviceOffering.provider.user.firstName} ${booking.serviceOffering.provider.user.lastName || ''}` : 'N/A');
+    // THE FIX: Dig 3 levels deep into the User table to guarantee we find the Provider's First Name!
+    const providerName = 
+      booking.provider?.user?.firstName ? `${booking.provider.user.firstName} ${booking.provider.user.lastName || ''}` : 
+      booking.provider?.name ? booking.provider.name :
+      booking.serviceOffering?.provider?.user?.firstName ? `${booking.serviceOffering.provider.user.firstName} ${booking.serviceOffering.provider.user.lastName || ''}` :
+      booking.serviceOffering?.provider?.name ? booking.serviceOffering.provider.name : "N/A";
 
     printWindow.document.write(`
       <html>
@@ -138,7 +141,7 @@ export default function MyBookings() {
             .invoice-title { text-transform: uppercase; color: #888; font-weight: bold; letter-spacing: 2px;}
             .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
             .details-box { background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #eee;}
-            table { w-full; border-collapse: collapse; margin-bottom: 30px; width: 100%; }
+            table { border-collapse: collapse; margin-bottom: 30px; width: 100%; }
             th { text-align: left; padding: 12px; border-bottom: 2px solid #ddd; color: #666; }
             td { padding: 12px; border-bottom: 1px solid #eee; }
             .totals { text-align: right; margin-left: auto; width: 300px; }
@@ -155,7 +158,6 @@ export default function MyBookings() {
             </div>
             <div class="invoice-title">INVOICE #${booking.id}</div>
           </div>
-
           <div class="details-grid">
             <div class="details-box">
               <strong>Billed To:</strong><br/>
@@ -169,45 +171,19 @@ export default function MyBookings() {
               <strong>Transaction ID:</strong> <span style="font-family: monospace;">${txnId}</span>
             </div>
           </div>
-
           <table>
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th style="text-align:right;">Amount</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Description</th><th style="text-align:right;">Amount</th></tr></thead>
             <tbody>
-              <tr>
-                <td>${booking.ServiceName || booking.serviceOffering?.name || 'Professional Service'}</td>
-                <td style="text-align:right;">₹${servicePrice}</td>
-              </tr>
-              <tr>
-                <td>Platform Escrow & Safety Fee</td>
-                <td style="text-align:right;">₹${platformFee}</td>
-              </tr>
+              <tr><td>${booking.ServiceName || booking.serviceOffering?.name || 'Professional Service'}</td><td style="text-align:right;">₹${servicePrice}</td></tr>
+              <tr><td>Platform Escrow & Safety Fee</td><td style="text-align:right;">₹${platformFee}</td></tr>
             </tbody>
           </table>
-
           <div class="totals">
-            <div class="totals-row">
-              <span>Subtotal:</span>
-              <span>₹${servicePrice}</span>
-            </div>
-            <div class="totals-row">
-              <span>Platform Fee:</span>
-              <span>₹${platformFee}</span>
-            </div>
-            <div class="totals-row grand-total">
-              <span>Total Paid:</span>
-              <span>₹${totalPaid}</span>
-            </div>
+            <div class="totals-row"><span>Subtotal:</span><span>₹${servicePrice}</span></div>
+            <div class="totals-row"><span>Platform Fee:</span><span>₹${platformFee}</span></div>
+            <div class="totals-row grand-total"><span>Total Paid:</span><span>₹${totalPaid}</span></div>
           </div>
-
-          <div class="footer">
-            Thank you for choosing NearEase.<br/>
-            This is a computer-generated invoice and requires no signature.
-          </div>
+          <div class="footer">Thank you for choosing NearEase.<br/>This is a computer-generated invoice and requires no signature.</div>
         </body>
       </html>
     `);
@@ -221,6 +197,14 @@ export default function MyBookings() {
       setHiddenIds(updated);
       localStorage.setItem("hiddenCustomerBookings", JSON.stringify(updated));
     }
+  };
+
+  // THE FIX: Handle Review Success cleanly
+  const handleReviewSuccess = (bookingId) => {
+    const updated = [...reviewedIds, bookingId];
+    setReviewedIds(updated);
+    localStorage.setItem("nearEaseReviewedBookings", JSON.stringify(updated));
+    setReviewModalOpen(false);
   };
 
   const visibleBookings = bookings.filter(b => !hiddenIds.includes(b.id));
@@ -243,21 +227,18 @@ export default function MyBookings() {
             const isPast = new Date(booking.scheduledTime) < new Date();
             const servicePrice = booking.price || booking.serviceOffering?.price || 0;
             const totalWithFee = servicePrice + 50;
-
             const note = booking.CostumerRequest || booking.customerRequest || booking.note;
+            
+            // THE FIX: Check LocalStorage to see if it was reviewed
+            const hasBeenReviewed = booking.hasReviewed || reviewedIds.includes(booking.id);
 
             return (
               <div key={booking.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all hover:shadow-md relative group">
                 
-                <button 
-                  onClick={() => handleDeleteCard(booking.id)} 
-                  className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors p-2 bg-white/80 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 shadow-sm z-10"
-                  title="Remove from view"
-                >
+                <button onClick={() => handleDeleteCard(booking.id)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors p-2 bg-white/80 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 shadow-sm z-10" title="Remove from view">
                   <Trash2 size={18} />
                 </button>
 
-                {/* --- SMART STATUS BANNERS --- */}
                 {booking.bookingStatus === "PENDING" && !isPast && (
                   <div className="bg-yellow-50 text-yellow-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-yellow-100">
                     <Clock size={16} /> Request sent. Waiting for provider approval.
@@ -268,21 +249,16 @@ export default function MyBookings() {
                     <AlertCircle size={16} /> Request Expired. The scheduled time has passed without provider approval.
                   </div>
                 )}
-                
-                {/* AFTER PAYMENT GREEN BADGE */}
                 {booking.bookingStatus === "CONFIRMED" && booking.paymentStatus === "PAID_TO_PLATFORM" && (
                   <div className="bg-emerald-50 text-emerald-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-emerald-100">
                     <ShieldCheck size={16} /> Payment secured in Escrow. Waiting for provider to complete the job.
                   </div>
                 )}
-                
-                {/* BEFORE PAYMENT BLUE BADGE */}
                 {booking.bookingStatus === "CONFIRMED" && booking.paymentStatus !== "PAID_TO_PLATFORM" && (
                   <div className="bg-blue-50 text-blue-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-blue-100">
                     <CheckCircle size={16} /> Request accepted! Please complete payment to secure your slot.
                   </div>
                 )}
-
                 {booking.bookingStatus === "COMPLETED" && (
                   <div className="bg-green-50 text-green-800 px-6 py-3 font-medium text-sm flex items-center gap-2 border-b border-green-100">
                     <CheckCircle size={16} /> The service has been completed successfully.
@@ -320,7 +296,6 @@ export default function MyBookings() {
                       <MapPin className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
                       <span><span className="block font-semibold text-gray-900 dark:text-gray-100">Location</span>{booking.workLocation}</span>
                     </p>
-                    
                     {note && (
                       <p className="text-gray-600 dark:text-gray-300 flex items-start gap-2 md:col-span-2">
                         <FileText className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
@@ -330,18 +305,13 @@ export default function MyBookings() {
                   </div>
 
                   <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    
                     {booking.bookingStatus === "PENDING" && !isPast && (
-                      <button onClick={() => handleInitiateCancel(booking.id)} className="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors">
-                        Cancel Booking
-                      </button>
+                      <button onClick={() => handleInitiateCancel(booking.id)} className="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors">Cancel Booking</button>
                     )}
 
                     {booking.bookingStatus === "CONFIRMED" && booking.paymentStatus !== "PAID_TO_PLATFORM" && !isPast && (
                       <>
-                        <button onClick={() => handleInitiateCancel(booking.id)} className="text-gray-500 hover:text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors">
-                          Cancel
-                        </button>
+                        <button onClick={() => handleInitiateCancel(booking.id)} className="text-gray-500 hover:text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors">Cancel</button>
                         <button onClick={() => handlePayment(booking)} className="bg-indigo-600 text-white hover:bg-indigo-700 px-6 py-2 rounded-lg font-bold transition-all shadow-md flex items-center gap-2 transform hover:-translate-y-0.5">
                           <DollarSign size={18} /> Pay Now (₹{totalWithFee})
                         </button>
@@ -354,7 +324,8 @@ export default function MyBookings() {
                           <Printer size={18} /> Print Bill
                         </button>
                         
-                        {!booking.hasReviewed && (
+                        {/* THE FIX: Disappears permanently after reviewing */}
+                        {!hasBeenReviewed && (
                           <button onClick={() => { setSelectedBookingForReview(booking); setReviewModalOpen(true); }} className="bg-green-100 text-green-700 hover:bg-green-200 px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2">
                             <Star size={18} className="fill-green-700" /> Leave Review
                           </button>
@@ -373,12 +344,9 @@ export default function MyBookings() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">
             <div className="absolute -top-20 -left-20 w-40 h-40 bg-red-500 rounded-full blur-3xl opacity-20"></div>
-
             {cancelMessage ? (
               <div className="py-6 animate-in zoom-in">
-                <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/30">
-                  <CheckCircle className="text-white w-10 h-10" />
-                </div>
+                <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/30"><CheckCircle className="text-white w-10 h-10" /></div>
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{cancelMessage}</h3>
               </div>
             ) : (
@@ -397,7 +365,8 @@ export default function MyBookings() {
         </div>
       )}
 
-      <ReviewModal isOpen={reviewModalOpen} onClose={() => setReviewModalOpen(false)} booking={selectedBookingForReview} onSuccess={(bookingId) => setBookings(bookings.map(b => b.id === bookingId ? { ...b, hasReviewed: true } : b))} />
+      {/* THE FIX: Trigger handleReviewSuccess properly */}
+      <ReviewModal isOpen={reviewModalOpen} onClose={() => setReviewModalOpen(false)} booking={selectedBookingForReview} onSuccess={handleReviewSuccess} />
     </div>
   );
 }
