@@ -12,7 +12,6 @@ export default function MyBookings() {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedBookingForReview, setSelectedBookingForReview] = useState(null);
   
-  // THE FIX: Use LocalStorage to remember which bookings we've already reviewed
   const [reviewedIds, setReviewedIds] = useState(() => JSON.parse(localStorage.getItem("nearEaseReviewedBookings") || "[]"));
   const [hiddenIds, setHiddenIds] = useState(() => JSON.parse(localStorage.getItem("hiddenCustomerBookings") || "[]"));
 
@@ -123,7 +122,6 @@ export default function MyBookings() {
     const totalPaid = servicePrice + platformFee;
     const txnId = booking.transectionId || booking.transactionId || 'Awaiting Sync';
 
-    // THE FIX: Dig 3 levels deep into the User table to guarantee we find the Provider's First Name!
     const providerName = 
       booking.provider?.user?.firstName ? `${booking.provider.user.firstName} ${booking.provider.user.lastName || ''}` : 
       booking.provider?.name ? booking.provider.name :
@@ -199,9 +197,8 @@ export default function MyBookings() {
     }
   };
 
-  // THE FIX: Handle Review Success cleanly
   const handleReviewSuccess = (bookingId) => {
-    const updated = [...reviewedIds, bookingId];
+    const updated = [...reviewedIds, String(bookingId)]; // Force string save
     setReviewedIds(updated);
     localStorage.setItem("nearEaseReviewedBookings", JSON.stringify(updated));
     setReviewModalOpen(false);
@@ -229,8 +226,8 @@ export default function MyBookings() {
             const totalWithFee = servicePrice + 50;
             const note = booking.CostumerRequest || booking.customerRequest || booking.note;
             
-            // THE FIX: Check LocalStorage to see if it was reviewed
-            const hasBeenReviewed = booking.hasReviewed || reviewedIds.includes(booking.id);
+            // THE FIX: Enforce Strict String Comparison to defeat the Type Mismatch
+            const hasBeenReviewed = booking.hasReviewed || reviewedIds.some(id => String(id) === String(booking.id));
 
             return (
               <div key={booking.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all hover:shadow-md relative group">
@@ -324,7 +321,6 @@ export default function MyBookings() {
                           <Printer size={18} /> Print Bill
                         </button>
                         
-                        {/* THE FIX: Disappears permanently after reviewing */}
                         {!hasBeenReviewed && (
                           <button onClick={() => { setSelectedBookingForReview(booking); setReviewModalOpen(true); }} className="bg-green-100 text-green-700 hover:bg-green-200 px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2">
                             <Star size={18} className="fill-green-700" /> Leave Review
@@ -365,7 +361,6 @@ export default function MyBookings() {
         </div>
       )}
 
-      {/* THE FIX: Trigger handleReviewSuccess properly */}
       <ReviewModal isOpen={reviewModalOpen} onClose={() => setReviewModalOpen(false)} booking={selectedBookingForReview} onSuccess={handleReviewSuccess} />
     </div>
   );

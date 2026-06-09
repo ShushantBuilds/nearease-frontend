@@ -36,7 +36,7 @@ export default function ReviewList({ providerId }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 mt-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-gray-900 dark:text-white">Customer Reviews</h3>
         <span className="bg-indigo-50 text-indigo-700 font-bold px-3 py-1 rounded-lg text-sm">
@@ -45,43 +45,49 @@ export default function ReviewList({ providerId }) {
       </div>
 
       <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-        {reviews.map((review, idx) => (
-          <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 transition hover:shadow-sm">
-            <div className="flex justify-between items-start mb-3">
-              <div className="flex items-center gap-3">
-                <div className="bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-700 w-10 h-10 rounded-full flex items-center justify-center font-black shadow-inner">
-                  {review.customerName?.charAt(0).toUpperCase() || <User size={18} />}
-                </div>
-                <div>
-                  <span className="font-bold text-gray-900 dark:text-white block">
-                    {review.customerName || "Verified Customer"}
-                  </span>
-                  {review.createdAt && (
-                    <span className="text-xs text-gray-400">
-                      {new Date(review.createdAt).toLocaleDateString()}
+        {reviews.map((review, idx) => {
+          
+          // THE FIX: Catch the comment regardless of how the Java DTO capitalizes it
+          const displayComment = review.comment || review.Comment || review.review || review.message;
+
+          return (
+            <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 transition hover:shadow-sm">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-700 w-10 h-10 rounded-full flex items-center justify-center font-black shadow-inner">
+                    {review.customerName?.charAt(0).toUpperCase() || <User size={18} />}
+                  </div>
+                  <div>
+                    <span className="font-bold text-gray-900 dark:text-white block">
+                      {review.customerName || "Verified Customer"}
                     </span>
-                  )}
+                    {review.createdAt && (
+                      <span className="text-xs text-gray-400">
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex text-yellow-400 bg-white dark:bg-gray-800 px-2 py-1 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={14} className={i < review.rating ? "fill-yellow-400" : "text-gray-300 dark:text-gray-600"} />
+                  ))}
                 </div>
               </div>
-              <div className="flex text-yellow-400 bg-white dark:bg-gray-800 px-2 py-1 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={14} className={i < review.rating ? "fill-yellow-400" : "text-gray-300 dark:text-gray-600"} />
-                ))}
-              </div>
+              
+              {/* Conditional rendering based on the extracted comment */}
+              {displayComment ? (
+                 <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed italic">
+                   "{displayComment}"
+                 </p>
+              ) : (
+                 <p className="text-gray-400 dark:text-gray-500 text-sm italic">
+                   No written comment provided.
+                 </p>
+              )}
             </div>
-            
-            {/* THE FIX: Only render quotes if comment actually exists! */}
-            {review.comment ? (
-               <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed italic">
-                 "{review.comment}"
-               </p>
-            ) : (
-               <p className="text-gray-400 dark:text-gray-500 text-sm italic">
-                 No written comment provided.
-               </p>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

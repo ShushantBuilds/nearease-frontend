@@ -312,12 +312,13 @@ export default function App() {
              service={bookingService} 
              onBack={() => setActivePage("home")} 
              onProceedToCheckout={() => setActivePage("checkout")} 
+             // THE FIX: Trigger the AuthModal to open the login view smoothly!
+             onLoginRedirect={() => setAuthModalView("login")} 
           />
         ) : activePage === "checkout" ? (
           <CheckoutPage 
              service={bookingService} 
              onBack={() => setActivePage("home")} 
-             // THE FIX: Directly routes to bookings on success
              onComplete={() => setActivePage("bookings")} 
           />
         ) : activePage === "bookings" ? (
