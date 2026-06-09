@@ -3,10 +3,14 @@ import { X, UploadCloud, Loader2, AlertCircle } from "lucide-react";
 import { ProviderAPI } from "../services/providerApi";
 import { PublicAPI } from "../services/publicApi"; 
 
+import PortfolioUploader from "./PortfolioUploader";
+
 export default function AddServiceModal({ isOpen, onClose, onSuccess, hasExistingService }) {
   const [categories, setCategories] = useState([]);
   const [types, setTypes] = useState([]);
   
+  const [portfolioImages, setPortfolioImages] = useState([]);
+
   const [selectedCategory, setSelectedCategory] = useState("");
   const [formData, setFormData] = useState({
     name: "", // Added the missing name field
@@ -157,6 +161,10 @@ export default function AddServiceModal({ isOpen, onClose, onSuccess, hasExistin
                 className="w-full p-3 border rounded-xl bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none"
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
               />
+            </div>
+
+            <div className="mb-4">
+              <PortfolioUploader onImagesChange={(images) => setPortfolioImages(images)} />
             </div>
 
             {/* Image Upload Area */}

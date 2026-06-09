@@ -62,7 +62,6 @@ export default function MyBookings() {
           
           alert("Payment Successful! Your funds are secured in Escrow.");
 
-          // THE FIX: Save the ID locally to bypass the backend DTO omission!
           localStorage.setItem(`txn_nearEase_${booking.id}`, response.razorpay_order_id);
 
           setBookings((prevBookings) => 
@@ -137,7 +136,6 @@ export default function MyBookings() {
     const platformFee = 50;
     const totalPaid = servicePrice + platformFee;
     
-    // THE FIX: Read from localStorage as the ultimate fallback
     const txnId = booking.transection_id || booking.transectionId || booking.transactionId || localStorage.getItem(`txn_nearEase_${booking.id}`) || 'Awaiting Sync';
 
     const providerName = 
@@ -318,7 +316,50 @@ export default function MyBookings() {
                     )}
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                  {/* ------------------------------------------- */}
+                  {/* INJECTED JOB GALLERY FOR COMPLETED BOOKINGS   */}
+                  {/* ------------------------------------------- */}
+                  {booking.bookingStatus === "COMPLETED" && (booking.beforeImages || booking.afterImages) && (
+                    <div className="mt-6 pt-6 border-t border-dashed border-gray-200 dark:border-gray-700">
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                        <Star size={16} className="text-indigo-500" /> Job Gallery
+                      </h4>
+                      
+                      <div className="flex gap-4">
+                        {booking.beforeImages && (
+                          <div className="flex-1 relative group">
+                            <span className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md z-10">
+                              Before
+                            </span>
+                            <div className="w-full h-40 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
+                              <img 
+                                src={booking.beforeImages} 
+                                alt="Before the service" 
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {booking.afterImages && (
+                          <div className="flex-1 relative group">
+                            <span className="absolute top-2 left-2 bg-green-500/90 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md z-10">
+                              After
+                            </span>
+                            <div className="w-full h-40 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
+                              <img 
+                                src={booking.afterImages} 
+                                alt="After the service" 
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-3 pt-6 mt-6 border-t border-gray-100 dark:border-gray-700">
                     {booking.bookingStatus === "PENDING" && !isPast && (
                       <button onClick={() => handleInitiateCancel(booking.id)} className="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors">Cancel Booking</button>
                     )}
