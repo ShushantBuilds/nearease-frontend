@@ -67,10 +67,10 @@ export default function Navbar({
             <MapPin size={16} className="text-gray-400 mr-2" />
             <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Where? (e.g. Raipur)" className="w-full bg-transparent outline-none text-sm dark:text-white placeholder-gray-400" />
           </div>
-          <div className="flex items-center px-4 py-1.5 flex-1">
+          {/* <div className="flex items-center px-4 py-1.5 flex-1">
             <Search size={16} className="text-gray-400 mr-2" />
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search services..." className="w-full bg-transparent outline-none text-sm dark:text-white placeholder-gray-400" />
-          </div>
+          </div> */}
           <button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-2 ml-1 transition cursor-pointer">
             <Search size={16} />
           </button>

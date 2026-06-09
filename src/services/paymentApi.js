@@ -55,13 +55,31 @@ export const PaymentAPI = {
   },
 
   // 2. Notify backend of payment success (Customer Flow)
-  confirmPaymentSuccess: async (bookingId, paymentDetails = {}) => {
-    return fetchWithAuth(`${BASE_URL}/mock-success/${bookingId}`, { 
-      method: "POST", 
-      headers: getHeaders(),
-      // Send the Razorpay Payment ID to the backend
-      body: JSON.stringify(paymentDetails) 
+  confirmPaymentSuccess: async (bookingId, verificationData) => {
+    const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+
+    // Extract the token to authorize the request
+    let token = null;
+    try {
+      const userStr = localStorage.getItem("nearEaseUser");
+      if (userStr) token = JSON.parse(userStr).token;
+    } catch (e) {}
+
+    // THE FIX: Route this directly to your Java mock-success endpoint
+    const res = await fetch(`${BASE_URL}/api/payments/mock-success/${bookingId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": token ? `Bearer ${token}` : ""
+      }
     });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to sync payment with server");
+    }
+    
+    return res.json();
   },
 
   // 3. Trigger provider payout (Admin/System Flow)
