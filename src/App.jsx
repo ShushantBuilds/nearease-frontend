@@ -24,19 +24,16 @@ import { UserAPI } from "./services/userApi";
 import { heroImages } from "./data/mockData"; 
 
 export default function App() {
-  // --- DYNAMIC DATA STATES ---
   const [mainCategories, setMainCategories] = useState([]); 
   const [subCategories, setSubCategories] = useState([]);   
   const [listings, setListings] = useState([]);             
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // Search & Filter States
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("");
   const [activeMainCategory, setActiveMainCategory] = useState("All");
   const [activeSubCategory, setActiveSubCategory] = useState(null); 
   
-  // UI & Routing States
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [authModalView, setAuthModalView] = useState(null); 
   const [user, setUser] = useState(null); 
@@ -48,16 +45,11 @@ export default function App() {
 
   const mainContentRef = useRef(null);
 
-  // ==========================================
-  // --- PERSISTENT LOGIN LOGIC ---
-  // ==========================================
   useEffect(() => {
     const savedUser = localStorage.getItem("nearEaseUser");
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
-      setUser(parsedUser); // Immediately log them in
-
-      // Silently fetch fresh data from the database in the background
+      setUser(parsedUser); 
       if (parsedUser.token) {
         UserAPI.getMyDetails()
           .then((freshData) => {
@@ -72,14 +64,11 @@ export default function App() {
             setUser(updatedUser);
             localStorage.setItem("nearEaseUser", JSON.stringify(updatedUser));
           })
-          .catch((err) => {
-            console.error("Failed to fetch fresh user data", err);
-          });
+          .catch(err => console.error("Failed to fetch fresh user data", err));
       }
     }
   }, []);
 
-  // 1. Initial Load: Fetch main categories
   useEffect(() => {
     const loadCategories = async () => {
       const data = await PublicAPI.getCategories();
@@ -88,37 +77,26 @@ export default function App() {
     loadCategories();
   }, []);
 
-  // 2. Fetch Subcategories ONLY when Main Category changes
   useEffect(() => {
     const fetchSubCats = async () => {
       setActiveSubCategory(null);
-      setListings([]);
-
       if (activeMainCategory === "All") {
         setSubCategories([]);
         return;
       }
-      
       const data = await PublicAPI.getTypesByCategory(activeMainCategory);
       setSubCategories(Array.isArray(data) ? data : []);
     };
     fetchSubCats();
   }, [activeMainCategory]);
 
+  // THE FIX: Always fetch all offerings so our frontend filter has the raw data to work with!
   useEffect(() => {
     const fetchListings = async () => {
       setIsLoadingData(true);
       try {
-        let data = [];
-        
-        if (activeMainCategory === "All") {
-          data = await PublicAPI.getAllOfferings(); 
-        } else if (activeSubCategory && activeSubCategory.id) {
-          data = await PublicAPI.getOfferingsByType(activeSubCategory.id);
-        }
-
+        const data = await PublicAPI.getAllOfferings();
         setListings(Array.isArray(data) ? data : []);
-
       } catch (error) {
         console.error("Failed to fetch listings:", error);
         setListings([]); 
@@ -130,7 +108,7 @@ export default function App() {
     if (activePage === "home") {
       fetchListings();
     }
-  }, [activeMainCategory, activeSubCategory, activePage]); 
+  }, [activePage]); 
 
   const scrollToContent = () => {
     if (mainContentRef.current) {
@@ -141,6 +119,7 @@ export default function App() {
     }
   };
 
+  // THE FIX: The Bulletproof Filtering Engine
   const filteredListings = listings.filter((item) => {
     const itemName = item?.name || item?.serviceType?.name || ""; 
     const matchesSearch = itemName.toLowerCase().includes(search.toLowerCase());
@@ -151,16 +130,20 @@ export default function App() {
     let matchesCategory = true;
     
     if (activeMainCategory !== "All") {
-      const itemMainCat = item?.serviceType?.category?.name?.toLowerCase() || item?.category?.toLowerCase() || "";
+      // Get the subcategory of the current item
+      const itemSubCat = (item?.serviceType?.name || "").toLowerCase();
+      // Fallback check just in case the backend DOES occasionally send the main category
+      const itemMainCat = (item?.serviceType?.category?.name || item?.categoryName || "").toLowerCase();
       const targetMainCat = activeMainCategory.toLowerCase();
-      
-      const itemSubCat = item?.serviceType?.name?.toLowerCase() || "";
-      const targetSubCat = activeSubCategory ? activeSubCategory.name.toLowerCase() : null;
 
-      if (targetSubCat) {
-        matchesCategory = (itemSubCat === targetSubCat);
+      if (activeSubCategory) {
+        // If they clicked a specific subcategory (e.g. Local Restaurants), match exactly
+        matchesCategory = (itemSubCat === activeSubCategory.name.toLowerCase());
       } else {
-        matchesCategory = (itemMainCat === targetMainCat);
+        // If they only clicked a Main Category, check if the item's subcategory is in our valid list!
+        const validSubCatsForThisCategory = subCategories.map(s => (s.name || "").toLowerCase());
+        
+        matchesCategory = validSubCatsForThisCategory.includes(itemSubCat) || (itemMainCat === targetMainCat);
       }
     }
     
@@ -196,10 +179,8 @@ export default function App() {
           handleLogout={handleLogout} setAuthModalView={setAuthModalView}
         />
 
-        {/* --- ROUTING LOGIC --- */}
         {activePage === "home" ? (
           <>
-            {/* HERO SECTION */}
             <div className="bg-white dark:bg-gray-900 py-16 md:py-24 px-4 transition-colors duration-300 border-b border-gray-100 dark:border-gray-800 relative z-10">
               <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 <div className="flex flex-col text-left space-y-6 z-10">
@@ -225,7 +206,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* MAIN CONTENT GRID */}
             <main ref={mainContentRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-gray-100 dark:border-gray-800">
               
               <div className="mb-10">
@@ -312,7 +292,6 @@ export default function App() {
              service={bookingService} 
              onBack={() => setActivePage("home")} 
              onProceedToCheckout={() => setActivePage("checkout")} 
-             // THE FIX: Trigger the AuthModal to open the login view smoothly!
              onLoginRedirect={() => setAuthModalView("login")} 
           />
         ) : activePage === "checkout" ? (
@@ -339,7 +318,6 @@ export default function App() {
           <ProviderDashboard defaultOpenAddService={true} />
         ) : null}
 
-        {/* --- MODALS --- */}
         <AuthModal 
           isOpen={authModalView !== null} 
           view={authModalView} 
@@ -360,7 +338,6 @@ export default function App() {
              setSelectedModalListing(null);
           }} 
         />
-        
       </div>
     </div>
   );

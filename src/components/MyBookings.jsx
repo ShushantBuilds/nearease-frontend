@@ -60,26 +60,24 @@ export default function MyBookings() {
         order_id: orderData.razorpayOrderId,
         handler: async function (response) {
           
-          // 1. Show an instant success message (No more error alerts!)
           alert("Payment Successful! Your funds are secured in Escrow.");
 
-          // 2. THE FIX: Optimistic UI Update
-          // Instantly update React state so the button vanishes, the green badge appears,
-          // and the Transaction ID is loaded for the invoice to print!
+          // THE FIX: Save the ID locally to bypass the backend DTO omission!
+          localStorage.setItem(`txn_nearEase_${booking.id}`, response.razorpay_order_id);
+
           setBookings((prevBookings) => 
             prevBookings.map((b) => 
               b.id === booking.id 
                 ? { 
                     ...b, 
                     paymentStatus: "PAID_TO_PLATFORM",
-                    transection_id: response.razorpay_order_id, // Spelled exactly like your DB
+                    transection_id: response.razorpay_order_id, 
                     transectionId: response.razorpay_order_id
                   } 
                 : b
             )
           );
 
-          // 3. Silently try to sync with the backend in the background
           try {
             await PaymentAPI.confirmPaymentSuccess(booking.id, {
                 razorpayPaymentId: response.razorpay_payment_id,
@@ -87,7 +85,7 @@ export default function MyBookings() {
                 razorpaySignature: response.razorpay_signature
             });
           } catch (err) {
-            console.warn("Backend sync pending, but UI updated successfully for the user.");
+             console.warn("Backend sync pending, but UI updated successfully for the user.");
           }
         },
         prefill: { name: orderData.customerName, email: orderData.customerEmail, contact: orderData.customerPhone },
@@ -139,8 +137,8 @@ export default function MyBookings() {
     const platformFee = 50;
     const totalPaid = servicePrice + platformFee;
     
-    // THE FIX: Grabs the ID seamlessly matching your exact database column spelling
-    const txnId = booking.transection_id || booking.transectionId || booking.transactionId || 'Awaiting Sync';
+    // THE FIX: Read from localStorage as the ultimate fallback
+    const txnId = booking.transection_id || booking.transectionId || booking.transactionId || localStorage.getItem(`txn_nearEase_${booking.id}`) || 'Awaiting Sync';
 
     const providerName = 
       booking.provider?.user?.firstName ? `${booking.provider.user.firstName} ${booking.provider.user.lastName || ''}` : 
@@ -325,7 +323,6 @@ export default function MyBookings() {
                       <button onClick={() => handleInitiateCancel(booking.id)} className="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors">Cancel Booking</button>
                     )}
 
-                    {/* ONLY DISPLAY IF NOT PAID */}
                     {booking.bookingStatus === "CONFIRMED" && booking.paymentStatus !== "PAID_TO_PLATFORM" && !isPast && (
                       <>
                         <button onClick={() => handleInitiateCancel(booking.id)} className="text-gray-500 hover:text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold transition-colors">Cancel</button>
