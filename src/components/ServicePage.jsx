@@ -1,14 +1,39 @@
-import React, { useEffect } from "react";
-import { Star, MapPin, ArrowLeft, Phone, MessageCircle, Flashlight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Star, MapPin, ArrowLeft, Phone, MessageCircle, Flashlight, AlertCircle } from "lucide-react";
 import PortfolioGallery from "./PortfolioGallery";
 import ReviewList from "./ReviewList";
 
-export default function ServicePage({ service, onBack, onProceedToCheckout }) {
-  
+export default function ServicePage({ service, onBack, onProceedToCheckout, onLoginRedirect }) {
+  // State for the custom, non-alert authentication warning message
+  const [authMessage, setAuthMessage] = useState("");
+
   // Extract the single main thumbnail image
   const mainImage = service?.imageUrl || "https://via.placeholder.com/800x400?text=No+Image";
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  // THE FIX: Restored the login interceptor!
+  const handleBookNow = () => {
+    const userStr = localStorage.getItem("nearEaseUser");
+    
+    // If no user session is found in localStorage
+    if (!userStr) {
+      setAuthMessage("Please log in first to book this service. Redirecting...");
+      
+      // Wait 1.5 seconds for the user to read the message, then redirect
+      setTimeout(() => {
+        if (typeof onLoginRedirect === "function") {
+          onLoginRedirect(); 
+        } else {
+          window.location.href = "/login"; // Standard route fallback
+        }
+      }, 1500);
+      return;
+    }
+
+    // If logged in, proceed to CheckoutPage normally
+    onProceedToCheckout(service);
+  };
 
   if (!service) return null;
 
@@ -53,14 +78,22 @@ export default function ServicePage({ service, onBack, onProceedToCheckout }) {
             {service.description || "High quality service guaranteed. Please review the portfolio below and book a slot that works for you."}
           </p>
 
-          {/* THE FIX: The PortfolioGallery component handles fetching and displaying the Before/After images automatically! */}
+          {/* This component automatically fetches and displays the Before/After images uploaded during job completion! */}
           <div className="mb-8">
             <PortfolioGallery providerId={service?.provider?.id} />
           </div>
 
           <div className="mt-auto pt-6 border-t border-gray-100 dark:border-gray-800">
+            
+            {/* Restored inline authentication message */}
+            {authMessage && (
+              <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-xl font-bold text-sm flex items-center justify-center gap-2 animate-in slide-in-from-bottom-2">
+                <AlertCircle size={18} /> {authMessage}
+              </div>
+            )}
+
             <button 
-              onClick={() => onProceedToCheckout(service)} 
+              onClick={handleBookNow} 
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition shadow-xl text-lg flex justify-center items-center gap-3 transform hover:-translate-y-1 cursor-pointer"
             >
               <Flashlight size={20} /> Book Now
