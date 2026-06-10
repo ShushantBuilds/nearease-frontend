@@ -1,43 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { Star, MapPin, ArrowLeft, Phone, MessageCircle, Flashlight, AlertCircle } from "lucide-react";
+import React, { useEffect } from "react";
+import { Star, MapPin, ArrowLeft, Phone, MessageCircle, Flashlight } from "lucide-react";
 import PortfolioGallery from "./PortfolioGallery";
 import ReviewList from "./ReviewList";
 
-// Added onLoginRedirect prop to handle the smooth transition to your login screen
-export default function ServicePage({ service, onBack, onProceedToCheckout, onLoginRedirect }) {
-  const [previewImage, setPreviewImage] = useState(0);
+export default function ServicePage({ service, onBack, onProceedToCheckout }) {
   
-  // State for our custom, non-alert warning message
-  const [authMessage, setAuthMessage] = useState("");
-
-  const images = service?.images?.length > 0 
-    ? service.images 
-    : (service?.imageUrl ? [service.imageUrl] : ["https://via.placeholder.com/800x400?text=No+Image"]);
+  // Extract the single main thumbnail image
+  const mainImage = service?.imageUrl || "https://via.placeholder.com/800x400?text=No+Image";
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
-
-  // THE FIX: Intercept the click to verify authentication before proceeding
-  const handleBookNow = () => {
-    const userStr = localStorage.getItem("nearEaseUser");
-    
-    // If no user session is found in localStorage
-    if (!userStr) {
-      setAuthMessage("Please log in first to book this service. Redirecting...");
-      
-      // Wait 1.5 seconds for the user to read the message, then redirect
-      setTimeout(() => {
-        if (typeof onLoginRedirect === "function") {
-          onLoginRedirect(); // Uses your conditional rendering (like onViewChange)
-        } else {
-          window.location.href = "/login"; // Standard route fallback
-        }
-      }, 1500);
-      return;
-    }
-
-    // If logged in, proceed to CheckoutPage normally
-    onProceedToCheckout(service);
-  };
 
   if (!service) return null;
 
@@ -50,19 +21,8 @@ export default function ServicePage({ service, onBack, onProceedToCheckout, onLo
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Left Column: Gallery & Reviews */}
         <div className="space-y-8">
-          <div className="space-y-4">
-            <div className="w-full aspect-video rounded-3xl overflow-hidden bg-gray-200 dark:bg-gray-800 shadow-md">
-              <img src={images[previewImage]} alt={service.name} className="w-full h-full object-cover animate-in fade-in duration-300" />
-            </div>
-            {images.length > 1 && (
-              <div className="flex gap-4 overflow-x-auto pb-2">
-                {images.map((img, idx) => (
-                  <button key={idx} onClick={() => setPreviewImage(idx)} className={`w-24 h-24 rounded-2xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${previewImage === idx ? 'border-indigo-600 opacity-100 scale-105' : 'border-transparent opacity-60 hover:opacity-100'}`}>
-                    <img src={img} className="w-full h-full object-cover" alt={`Thumb ${idx}`} />
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="w-full aspect-video rounded-3xl overflow-hidden bg-gray-200 dark:bg-gray-800 shadow-md">
+            <img src={mainImage} alt={service.name} className="w-full h-full object-cover" />
           </div>
 
           <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
@@ -93,22 +53,14 @@ export default function ServicePage({ service, onBack, onProceedToCheckout, onLo
             {service.description || "High quality service guaranteed. Please review the portfolio below and book a slot that works for you."}
           </p>
 
+          {/* THE FIX: The PortfolioGallery component handles fetching and displaying the Before/After images automatically! */}
           <div className="mb-8">
             <PortfolioGallery providerId={service?.provider?.id} />
           </div>
 
-          {/* Action Buttons */}
           <div className="mt-auto pt-6 border-t border-gray-100 dark:border-gray-800">
-            
-            {/* THE FIX: Clean, inline authentication message */}
-            {authMessage && (
-              <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-xl font-bold text-sm flex items-center justify-center gap-2 animate-in slide-in-from-bottom-2">
-                <AlertCircle size={18} /> {authMessage}
-              </div>
-            )}
-
             <button 
-              onClick={handleBookNow} 
+              onClick={() => onProceedToCheckout(service)} 
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition shadow-xl text-lg flex justify-center items-center gap-3 transform hover:-translate-y-1 cursor-pointer"
             >
               <Flashlight size={20} /> Book Now
