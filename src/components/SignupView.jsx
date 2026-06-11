@@ -123,18 +123,18 @@ export default function SignupView({ onViewChange }) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 ml-1 font-medium">First Name</label>
-          <input value={firstName} onChange={(e) => setFirstName(e.target.value)} type="text" placeholder="John" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 px-4 py-2.5 rounded-xl outline-none transition" />
+          <input value={firstName} onChange={(e) => setFirstName(e.target.value)} type="text" placeholder="Shyam" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 px-4 py-2.5 rounded-xl outline-none transition" />
         </div>
         <div>
           <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 ml-1 font-medium">Last Name</label>
-          <input value={lastName} onChange={(e) => setLastName(e.target.value)} type="text" placeholder="Doe" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 px-4 py-2.5 rounded-xl outline-none transition" />
+          <input value={lastName} onChange={(e) => setLastName(e.target.value)} type="text" placeholder="Sunder" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 px-4 py-2.5 rounded-xl outline-none transition" />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 ml-1 font-medium">Username</label>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} type="text" placeholder="johndoe123" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 px-4 py-2.5 rounded-xl outline-none transition" />
+          <input value={username} onChange={(e) => setUsername(e.target.value)} type="text" placeholder="Shyamu420" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 px-4 py-2.5 rounded-xl outline-none transition" />
         </div>
         <div>
           <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 ml-1 font-medium">Phone Number</label>
@@ -145,7 +145,7 @@ export default function SignupView({ onViewChange }) {
       <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
         <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 ml-1 font-medium">Email Address</label>
         <div className="flex gap-2">
-          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="john@example.com" disabled={isOtpSent || isEmailVerified} className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 px-4 py-2.5 rounded-xl outline-none transition disabled:opacity-60" />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="shyamunavada@gmail.com" disabled={isOtpSent || isEmailVerified} className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 px-4 py-2.5 rounded-xl outline-none transition disabled:opacity-60" />
           {!isOtpSent && !isEmailVerified && (
             <button onClick={handleGetOTP} disabled={isVerifying} className="px-4 bg-gray-900 dark:bg-indigo-600 hover:bg-gray-800 dark:hover:bg-indigo-700 text-white font-bold rounded-xl transition flex items-center gap-2 cursor-pointer whitespace-nowrap">
               {isVerifying ? <Loader2 size={18} className="animate-spin" /> : "Get OTP"}
