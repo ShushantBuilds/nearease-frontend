@@ -14,7 +14,31 @@ export default function PortfolioGallery({ providerId }) {
       const loadPortfolio = async () => {
         try {
           const data = await PublicAPI.getProviderPortfolio(providerId);
-          setPortfolio(Array.isArray(data) ? data : []);
+          
+          // THE FIX: Flatten the backend DTO into a standard gallery array!
+          let galleryItems = [];
+          if (Array.isArray(data)) {
+             data.forEach(job => {
+                // Grab the Before Image
+                if (job.beforeImageUrl) {
+                    galleryItems.push({ 
+                        url: job.beforeImageUrl, 
+                        label: 'Before', 
+                        serviceName: job.serviceName 
+                    });
+                }
+                // Grab the After Image
+                if (job.afterImageUrl) {
+                    galleryItems.push({ 
+                        url: job.afterImageUrl, 
+                        label: 'After', 
+                        serviceName: job.serviceName 
+                    });
+                }
+             });
+          }
+          
+          setPortfolio(galleryItems);
         } catch (error) {
           console.error("Failed to load portfolio", error);
         } finally {
@@ -50,7 +74,7 @@ export default function PortfolioGallery({ providerId }) {
   }
 
   return (
-    <div className="mt-8">
+    <div className="mt-8 animate-in fade-in">
       <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
         <Image size={22} className="text-indigo-600" />
         Past Work & Portfolio
@@ -64,11 +88,18 @@ export default function PortfolioGallery({ providerId }) {
             onClick={() => openLightbox(index)}
             className="group relative aspect-square rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer shadow-sm hover:shadow-md transition-all"
           >
+            {/* THE FIX: Use item.url to render the image */}
             <img 
-              src={item.imageUrl || item} 
+              src={item.url} 
               alt={`Portfolio ${index}`}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             />
+            
+            {/* Added Badge: Shows 'Before' or 'After' */}
+            <span className={`absolute top-2 left-2 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md z-10 ${item.label === 'After' ? 'bg-green-500/80' : 'bg-black/60'}`}>
+              {item.label}
+            </span>
+
             {/* Hover Overlay */}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
               <Maximize2 className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md" size={24} />
@@ -83,7 +114,6 @@ export default function PortfolioGallery({ providerId }) {
           className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-300"
           onClick={closeLightbox}
         >
-          {/* Close Button */}
           <button 
             onClick={closeLightbox}
             className="absolute top-6 right-6 text-white/70 hover:text-white p-2 bg-white/10 rounded-full transition-colors z-20"
@@ -91,7 +121,6 @@ export default function PortfolioGallery({ providerId }) {
             <X size={28} />
           </button>
 
-          {/* Navigation Controls */}
           <button 
             onClick={prevImg}
             className="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all z-20"
@@ -106,16 +135,24 @@ export default function PortfolioGallery({ providerId }) {
             <ChevronRight size={40} />
           </button>
 
-          {/* Main Image View */}
-          <div className="relative max-w-5xl w-full h-full flex items-center justify-center">
+          <div className="relative max-w-5xl w-full h-full flex flex-col items-center justify-center">
+            
+            {/* Context Header inside Lightbox */}
+            <div className="absolute top-6 left-6 text-white z-20">
+              <span className={`inline-block px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider mb-2 ${portfolio[selectedImgIndex].label === 'After' ? 'bg-green-500' : 'bg-gray-700'}`}>
+                {portfolio[selectedImgIndex].label} Image
+              </span>
+              <h4 className="font-bold text-lg">{portfolio[selectedImgIndex].serviceName}</h4>
+            </div>
+
+            {/* THE FIX: Use portfolio[selectedImgIndex].url to render the expanded image */}
             <img 
-              src={portfolio[selectedImgIndex].imageUrl || portfolio[selectedImgIndex]} 
+              src={portfolio[selectedImgIndex].url} 
               alt="Expanded view" 
               className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-300"
-              onClick={(e) => e.stopPropagation()} // Prevents closing when clicking image itself
+              onClick={(e) => e.stopPropagation()} 
             />
             
-            {/* Image Counter */}
             <div className="absolute bottom-[-40px] left-1/2 -translate-x-1/2 text-white/60 font-medium">
               {selectedImgIndex + 1} / {portfolio.length}
             </div>

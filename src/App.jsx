@@ -119,9 +119,10 @@ export default function App() {
     }
   };
 
-  // THE FIX: The Bulletproof Filtering Engine
   const filteredListings = listings.filter((item) => {
-    const itemName = item?.name || item?.serviceType?.name || ""; 
+    
+    // THE FIX: Added item?.serviceTypename to match your Postman JSON exactly
+    const itemName = item?.name || item?.serviceTypename || item?.serviceType?.name || ""; 
     const matchesSearch = itemName.toLowerCase().includes(search.toLowerCase());
 
     const itemLoc = item?.location || item?.provider?.address || "";
@@ -130,10 +131,12 @@ export default function App() {
     let matchesCategory = true;
     
     if (activeMainCategory !== "All") {
-      // Get the subcategory of the current item
-      const itemSubCat = (item?.serviceType?.name || "").toLowerCase();
-      // Fallback check just in case the backend DOES occasionally send the main category
-      const itemMainCat = (item?.serviceType?.category?.name || item?.categoryName || "").toLowerCase();
+      
+      // THE FIX: Added item?.serviceTypename to capture the subcategory
+      const itemSubCat = (item?.serviceTypename || item?.serviceType?.name || "").toLowerCase();
+      
+      // THE FIX: Fallback for the main category mapping
+      const itemMainCat = (item?.categoryName || item?.serviceType?.category?.name || "").toLowerCase();
       const targetMainCat = activeMainCategory.toLowerCase();
 
       if (activeSubCategory) {
