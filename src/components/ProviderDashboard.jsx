@@ -82,8 +82,8 @@ export default function ProviderDashboard() {
     try {
       const formData = new FormData();
       formData.append("otp", otpCode);
-      if (beforeImage) formData.append("beforeImage", beforeImage);
-      if (afterImage) formData.append("afterImage", afterImage);
+      if (beforeImage) formData.append("beforeImages", beforeImage);
+      if (afterImage) formData.append("afterImages", afterImage);
       
       await BookingAPI.completeBooking(completingJobId, formData);
       
