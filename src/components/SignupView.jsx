@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Loader2, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Loader2, CheckCircle2, Eye, EyeOff, XCircle } from "lucide-react";
 
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -15,6 +15,11 @@ export default function SignupView({ onViewChange }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
+  // LIVE USERNAME CHECKING STATE
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState(null);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameMessage, setUsernameMessage] = useState("");
+
   const [emailOtp, setEmailOtp] = useState("");
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
@@ -24,6 +29,50 @@ export default function SignupView({ onViewChange }) {
   const [isResending, setIsResending] = useState(false);
   const [resendMessage, setResendMessage] = useState("");
   const [error, setError] = useState("");
+
+  // ==========================================
+  // THE FIX: GitHub-style Live Username Check
+  // ==========================================
+  useEffect(() => {
+    // Reset if input is empty
+    if (!username || username.trim() === "") {
+      setIsUsernameAvailable(null);
+      setUsernameMessage("");
+      return;
+    }
+
+    // Basic frontend validation to save backend calls
+    if (username.length < 3) {
+      setIsUsernameAvailable(false);
+      setUsernameMessage("Username must be at least 3 characters");
+      return;
+    }
+
+    const checkUsername = async () => {
+      setIsCheckingUsername(true);
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/auth/check/username?username=${username}`);
+        if (response.ok) {
+          const data = await response.json();
+          setIsUsernameAvailable(data.available);
+          setUsernameMessage(data.available ? "Username is available" : "Username is already taken");
+        } else {
+          setIsUsernameAvailable(null);
+          setUsernameMessage("");
+        }
+      } catch (err) {
+        console.error("Failed to check username status", err);
+        setIsUsernameAvailable(null);
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    };
+
+    // DEBOUNCE: Wait 500ms after the user stops typing before calling the API
+    const timeoutId = setTimeout(checkUsername, 500);
+    return () => clearTimeout(timeoutId);
+  }, [username]);
+
 
   const handleGetOTP = async () => {
     if (!email) return alert("Please enter an email address first.");
@@ -88,6 +137,7 @@ export default function SignupView({ onViewChange }) {
   };
 
   const handleSignup = async () => {
+    if (isUsernameAvailable === false) return alert("Please choose an available username.");
     if (password !== confirmPassword) return alert("Passwords do not match!");
     if (!isEmailVerified) return alert("Please verify your email before creating an account.");
     
@@ -132,10 +182,30 @@ export default function SignupView({ onViewChange }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
+        {/* ENHANCED USERNAME INPUT */}
         <div>
           <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 ml-1 font-medium">Username</label>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} type="text" placeholder="Shyamu420" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 px-4 py-2.5 rounded-xl outline-none transition" />
+          <div className="relative">
+            <input 
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)} 
+              type="text" 
+              placeholder="Shyamu420" 
+              className={`w-full bg-gray-50 dark:bg-gray-900 border focus:bg-white dark:focus:bg-gray-800 px-4 pr-10 py-2.5 rounded-xl outline-none transition ${isUsernameAvailable === false ? "border-red-400" : isUsernameAvailable === true ? "border-green-400" : "border-gray-200 dark:border-gray-700"}`} 
+            />
+            <div className="absolute right-3 top-3">
+              {isCheckingUsername && <Loader2 size={16} className="animate-spin text-gray-400" />}
+              {!isCheckingUsername && isUsernameAvailable === true && <CheckCircle2 size={16} className="text-green-500" />}
+              {!isCheckingUsername && isUsernameAvailable === false && <XCircle size={16} className="text-red-500" />}
+            </div>
+          </div>
+          {usernameMessage && (
+            <p className={`text-[10px] mt-1 ml-1 font-semibold ${isUsernameAvailable ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+              {usernameMessage}
+            </p>
+          )}
         </div>
+        
         <div>
           <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1 ml-1 font-medium">Phone Number</label>
           <input value={PhoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} type="tel" placeholder="+91 98765 43210" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-800 px-4 py-2.5 rounded-xl outline-none transition" />
