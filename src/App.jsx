@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowDownCircle, Loader2 } from "lucide-react";
+import { ArrowDownCircle, Loader2, MapPin, Search } from "lucide-react";
 
 // Components
 import Navbar from "./components/Navbar";
@@ -90,7 +90,6 @@ export default function App() {
     fetchSubCats();
   }, [activeMainCategory]);
 
-  // THE FIX: Always fetch all offerings so our frontend filter has the raw data to work with!
   useEffect(() => {
     const fetchListings = async () => {
       setIsLoadingData(true);
@@ -120,8 +119,6 @@ export default function App() {
   };
 
   const filteredListings = listings.filter((item) => {
-    
-    // THE FIX: Added item?.serviceTypename to match your Postman JSON exactly
     const itemName = item?.name || item?.serviceTypename || item?.serviceType?.name || ""; 
     const matchesSearch = itemName.toLowerCase().includes(search.toLowerCase());
 
@@ -131,21 +128,14 @@ export default function App() {
     let matchesCategory = true;
     
     if (activeMainCategory !== "All") {
-      
-      // THE FIX: Added item?.serviceTypename to capture the subcategory
       const itemSubCat = (item?.serviceTypename || item?.serviceType?.name || "").toLowerCase();
-      
-      // THE FIX: Fallback for the main category mapping
       const itemMainCat = (item?.categoryName || item?.serviceType?.category?.name || "").toLowerCase();
       const targetMainCat = activeMainCategory.toLowerCase();
 
       if (activeSubCategory) {
-        // If they clicked a specific subcategory (e.g. Local Restaurants), match exactly
         matchesCategory = (itemSubCat === activeSubCategory.name.toLowerCase());
       } else {
-        // If they only clicked a Main Category, check if the item's subcategory is in our valid list!
         const validSubCatsForThisCategory = subCategories.map(s => (s.name || "").toLowerCase());
-        
         matchesCategory = validSubCatsForThisCategory.includes(itemSubCat) || (itemMainCat === targetMainCat);
       }
     }
@@ -173,10 +163,9 @@ export default function App() {
     <div className={isDarkMode ? "dark" : ""}>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 relative transition-colors duration-300">
         
+        {/* Navbar no longer takes search props */}
         <Navbar 
           activePage={activePage} setActivePage={setActivePage}
-          location={location} setLocation={setLocation}
-          search={search} setSearch={setSearch}
           user={user} isDropdownOpen={isDropdownOpen} setIsDropdownOpen={setIsDropdownOpen}
           toggleTheme={toggleTheme} isDarkMode={isDarkMode}
           handleLogout={handleLogout} setAuthModalView={setAuthModalView}
@@ -212,7 +201,26 @@ export default function App() {
             <main ref={mainContentRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-gray-100 dark:border-gray-800">
               
               <div className="mb-10">
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Choose an Experience</h3>
+                {/* INLINE SEARCH BAR & TITLE ROW */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white shrink-0">Choose an Experience</h3>
+
+                   <div className="flex w-full lg:max-w-2xl bg-white dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 p-1.5 items-center shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-center px-4 py-2 flex-1 border-r border-gray-200 dark:border-gray-700">
+                        <MapPin size={18} className="text-gray-400 mr-2 shrink-0" />
+                        <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Where? (e.g. Raipur)" className="w-full bg-transparent outline-none text-sm dark:text-white placeholder-gray-400" />
+                      </div>
+                      <div className="flex items-center px-4 py-2 flex-1">
+                        <Search size={18} className="text-gray-400 mr-2 shrink-0" />
+                        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search services..." className="w-full bg-transparent outline-none text-sm dark:text-white placeholder-gray-400" />
+                      </div>
+                      <button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-2.5 ml-1 transition cursor-pointer">
+                        <Search size={18} />
+                      </button>
+                   </div>
+                </div>
+
+                {/* Category Bubbles */}
                 <div className="flex gap-4 overflow-x-auto pb-2">
                   <button 
                     onClick={() => setActiveMainCategory("All")}
@@ -239,6 +247,7 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Subcategories Filter */}
               {activeMainCategory !== "All" && subCategories.length > 0 && (
                 <div className="mb-12 animate-in slide-in-from-top-4 duration-300">
                   <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Filter by Type</h4>
@@ -282,7 +291,7 @@ export default function App() {
                   ) : (
                     !isLoadingData && (
                       <div className="col-span-full py-12 text-center bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
-                        <p className="text-gray-500 dark:text-gray-400 text-lg">No services found in this category.</p>
+                        <p className="text-gray-500 dark:text-gray-400 text-lg">No services found for your search.</p>
                       </div>
                     )
                   )}

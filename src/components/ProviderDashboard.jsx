@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { 
   Briefcase, DollarSign, Clock, CheckCircle, AlertCircle, MapPin, 
-  Calendar, User, Loader2, Plus, TrendingUp, XCircle, FileText, Trash2, Image as ImageIcon
+  Calendar, User, Loader2, Plus, TrendingUp, XCircle, FileText, Trash2, Image as ImageIcon,
+  Maximize2 // Added for the preview hover effect
 } from "lucide-react";
 import { ProviderAPI } from "../services/providerApi";
 import { BookingAPI } from "../services/bookingApi";
 import AddServiceModal from "./AddServiceModal";
+import GoBackButton from "./GoBackButton"; 
 
 export default function ProviderDashboard() {
   const [activeTab, setActiveTab] = useState("overview"); 
@@ -22,6 +24,9 @@ export default function ProviderDashboard() {
   const [afterImage, setAfterImage] = useState(null);
   const [isSubmittingOtp, setIsSubmittingOtp] = useState(false);
   const [completionMessage, setCompletionMessage] = useState("");
+
+  // THE FIX: New state to handle the full-screen image preview!
+  const [previewImage, setPreviewImage] = useState(null);
 
   const mockGraphData = [
     { day: "Mon", height: "40%", amount: 400 },
@@ -120,6 +125,8 @@ export default function ProviderDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 relative">
+      <GoBackButton />
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Provider Workspace</h1>
         <button onClick={() => setIsAddModalOpen(true)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-indigo-700 flex items-center justify-center gap-2 shadow-sm">
@@ -194,12 +201,10 @@ export default function ProviderDashboard() {
               .filter(job => activeTab === "completed" ? job.bookingStatus === "COMPLETED" : job.bookingStatus !== "COMPLETED")
               .map((job) => {
                 const note = job.CostumerRequest || job.customerRequest || job.note;
-                
-                // THE FIX: Provide the exact, pure base price without any added platform fees.
                 const providerCost = job.price || job.serviceOffering?.price || 0;
 
                 return (
-                <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 shadow-sm p-6 relative">
+                <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 relative">
                   
                   <button onClick={() => handleDeleteCard(job.id)} className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors p-2 bg-red-50 hover:bg-red-100 rounded-full shadow-sm" title="Delete from dashboard">
                     <Trash2 size={18} />
@@ -231,15 +236,50 @@ export default function ProviderDashboard() {
                     )}
                   </div>
 
+                  {/* THE FIX: Job Gallery for Completed Jobs showing Before & After Pictures */}
+                  {job.bookingStatus === "COMPLETED" && (job.beforeImages || job.afterImages) && (
+                    <div className="mt-6 pt-5 border-t border-dashed border-gray-200 dark:border-gray-700">
+                      <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                        <ImageIcon size={16} className="text-indigo-500" /> Proof of Work Gallery
+                      </h4>
+                      <div className="flex gap-4">
+                        {job.beforeImages && (
+                          <div 
+                            onClick={() => setPreviewImage(job.beforeImages)}
+                            className="relative w-28 h-28 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 cursor-pointer group shadow-sm"
+                          >
+                            <span className="absolute top-1 left-1 bg-black/70 backdrop-blur-sm text-white text-[10px] uppercase px-2 py-0.5 rounded z-10 font-black tracking-widest">Before</span>
+                            <img src={job.beforeImages} alt="Before" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                              <Maximize2 className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md" size={24} />
+                            </div>
+                          </div>
+                        )}
+                        {job.afterImages && (
+                          <div 
+                            onClick={() => setPreviewImage(job.afterImages)}
+                            className="relative w-28 h-28 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 cursor-pointer group shadow-sm"
+                          >
+                            <span className="absolute top-1 left-1 bg-green-500/90 backdrop-blur-sm text-white text-[10px] uppercase px-2 py-0.5 rounded z-10 font-black tracking-widest">After</span>
+                            <img src={job.afterImages} alt="After" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                              <Maximize2 className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md" size={24} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {job.bookingStatus === "PENDING" && (
-                    <div className="flex gap-4 pt-2">
+                    <div className="flex gap-4 pt-2 mt-4">
                       <button onClick={() => handleStatusChange(job.id, "ACCEPTED")} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition">Accept Request</button>
                       <button onClick={() => handleStatusChange(job.id, "REJECTED")} className="flex-1 bg-red-50 text-red-600 py-3 rounded-xl font-bold hover:bg-red-100 transition">Reject Request</button>
                     </div>
                   )}
 
                   {(job.bookingStatus === "CONFIRMED" || job.bookingStatus === "ACCEPTED") && (
-                    <div className="pt-2">
+                    <div className="pt-2 mt-4">
                       <button onClick={() => handleInitiateCompletion(job.id)} className="w-full bg-green-500 text-white py-3.5 rounded-xl font-bold hover:bg-green-600 transition flex justify-center items-center gap-2 shadow-sm">
                         <CheckCircle size={20} /> Mark as Complete
                       </button>
@@ -251,6 +291,7 @@ export default function ProviderDashboard() {
         </div>
       )}
       
+      {/* COMPLETION OTP MODAL */}
       {completingJobId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
            <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden">
@@ -294,6 +335,28 @@ export default function ProviderDashboard() {
           </div>
         </div>
       )}
+
+      {/* THE FIX: FULL SCREEN IMAGE PREVIEW MODAL */}
+      {previewImage && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200" 
+          onClick={() => setPreviewImage(null)}
+        >
+          <button 
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 p-2 rounded-full transition-colors z-10"
+          >
+            <XCircle size={32} />
+          </button>
+          <img 
+            src={previewImage} 
+            alt="Preview" 
+            className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl animate-in zoom-in-95 duration-300" 
+            onClick={(e) => e.stopPropagation()} 
+          />
+        </div>
+      )}
+
       <AddServiceModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onSuccess={() => refreshDashboardData()} />
     </div>
   );

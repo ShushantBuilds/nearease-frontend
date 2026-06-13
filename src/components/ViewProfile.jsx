@@ -1,6 +1,8 @@
 import React from 'react';
 import { Mail, Phone, UserCircle, Calendar, Edit3, Shield, Briefcase } from 'lucide-react';
 
+import GoBackButton from "./GoBackButton";
+
 export default function ViewProfile({ user, setActivePage }) {
   if (!user) return null;
 

@@ -4,6 +4,8 @@ import { BookingAPI } from "../services/bookingApi";
 import { PaymentAPI } from "../services/paymentApi";
 import ReviewModal from "./ReviewModal";
 
+import GoBackButton from "./GoBackButton";
+
 export default function MyBookings() {
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);

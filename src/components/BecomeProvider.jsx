@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Briefcase, CheckCircle, Loader2 } from "lucide-react";
 import { ProviderAPI } from "../services/providerApi";
 
+import GoBackButton from "./GoBackButton";
+
 export default function BecomeProvider({ user, onBack }) {
   const [formData, setFormData] = useState({
     bio: "",

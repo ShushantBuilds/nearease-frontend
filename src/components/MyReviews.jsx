@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Star, MessageSquare, Loader2, Calendar, User as UserIcon } from "lucide-react";
 import { UserAPI } from "../services/userApi"; 
 
+import GoBackButton from "./GoBackButton";
+
 export default function MyReviews() {
   const [reviews, setReviews] = useState([]);
   const [isLoading, setIsLoading] = useState(true);

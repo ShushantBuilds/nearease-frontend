@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { User, Mail, Lock, Camera, Loader2, CheckCircle } from "lucide-react";
 import { UserAPI } from "../services/userApi";
 
+import GoBackButton from "./GoBackButton";
+
 export default function ProfileSettings({ user, setUser }) {
   // --- STATES FOR EACH SECTION ---
   const [details, setDetails] = useState({

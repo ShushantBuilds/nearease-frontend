@@ -7,6 +7,8 @@ import { AdminAPI } from "../services/adminApi";
 import { BookingAPI } from "../services/bookingApi";
 import { PaymentAPI } from "../services/paymentApi";
 
+import GoBackButton from "./GoBackButton";
+
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState("verifications"); // 'verifications' or 'financials'
   
