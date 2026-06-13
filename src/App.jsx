@@ -15,6 +15,7 @@ import ProfileSettings from "./components/ProfileSettings";
 import AdminPanel from "./components/AdminPanel";
 import MyReviews from "./components/MyReviews";
 import ViewProfile from './components/ViewProfile';
+import ToastContainer from "./components/ToastContainer";
 
 // API Services
 import { PublicAPI } from "./services/publicApi";
@@ -169,6 +170,8 @@ export default function App() {
     <div className={isDarkMode ? "dark" : ""}>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 relative transition-colors duration-300">
         
+        <ToastContainer />
+
         {/* Navbar no longer takes search props */}
         <Navbar 
           activePage={activePage} setActivePage={setActivePage}
