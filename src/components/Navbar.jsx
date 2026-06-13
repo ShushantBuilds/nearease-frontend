@@ -30,9 +30,9 @@ export default function Navbar({
           <button 
             onClick={toggleTheme} 
             className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors duration-300 focus:outline-none shadow-inner cursor-pointer hidden md:flex ${isDarkMode ? "bg-indigo-900" : "bg-gray-200"}`}
-          >
-            <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-in-out flex items-center justify-center ${isDarkMode ? "translate-x-9" : "translate-x-1"}`}>
-              {isDarkMode ? <Moon size={14} className="text-indigo-400" /> : <Sun size={14} className="text-amber-500" />}
+            >
+            <span className={`flex items-center justify-center h-6 w-6 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-in-out ${isDarkMode ? "translate-x-9" : "translate-x-1"}`}>
+            {isDarkMode ? <Moon size={14} className="text-indigo-400" /> : <Sun size={14} className="text-amber-500" />}
             </span>
           </button>
 
@@ -80,10 +80,10 @@ export default function Navbar({
         {/* Mobile menu action */}
         <div className="md:hidden flex items-center gap-3 shrink-0 ml-auto">
           <button 
-            onClick={toggleTheme} 
-            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none ${isDarkMode ? "bg-indigo-900" : "bg-gray-200"}`}
-          >
-            <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 flex items-center justify-center ${isDarkMode ? "translate-x-6" : "translate-x-1"}`}>
+              onClick={toggleTheme} 
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none ${isDarkMode ? "bg-indigo-900" : "bg-gray-200"}`}
+            >
+            <span className={`flex items-center justify-center h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${isDarkMode ? "translate-x-6" : "translate-x-1"}`}>
               {isDarkMode ? <Moon size={12} className="text-indigo-400" /> : <Sun size={12} className="text-amber-500" />}
             </span>
           </button>
