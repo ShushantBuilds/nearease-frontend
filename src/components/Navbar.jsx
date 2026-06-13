@@ -6,7 +6,7 @@ import {
 } from "lucide-react"; 
 
 export default function Navbar({ 
-  setActivePage, user, 
+  setActivePage, activePage, user, 
   isDropdownOpen, setIsDropdownOpen, toggleTheme, isDarkMode, 
   handleLogout, setAuthModalView 
 }) {
@@ -42,6 +42,27 @@ export default function Navbar({
   const isProvider = checkRole('PROVIDER');
   const isAdmin = checkRole('ADMIN');
 
+  // --- THE FIX: DYNAMIC ACTIVE STYLE GENERATOR ---
+  const getNavStyle = (pageName, baseColor) => {
+    const isActive = activePage === pageName;
+    
+    // Color palettes for different buttons
+    const colorMap = {
+      indigo: { active: "text-indigo-700 bg-indigo-50 dark:text-indigo-300 dark:bg-indigo-900/40", hover: "hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800/50" },
+      emerald: { active: "text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30", hover: "hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-gray-50 dark:hover:bg-gray-800/50" },
+      amber: { active: "text-amber-700 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30", hover: "hover:text-amber-600 dark:hover:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800/50" },
+      red: { active: "text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-900/30", hover: "hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-800/50" }
+    };
+
+    const colors = colorMap[baseColor];
+    
+    return `flex items-center gap-2 text-sm font-bold px-3 py-2 rounded-xl transition-all cursor-pointer ${
+      isActive 
+        ? colors.active 
+        : `text-gray-600 dark:text-gray-300 ${colors.hover}`
+    }`;
+  };
+
   return (
     <nav className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md sticky top-0 z-40 border-b border-gray-200 dark:border-gray-800 transition-colors duration-300 h-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center h-full">
@@ -58,29 +79,29 @@ export default function Navbar({
 
         {/* CENTER SPACE: Role-Specific Menus (Smoothly Fades In on Login) */}
         {user && (
-          <div className="hidden lg:flex flex-1 items-center justify-center gap-8 animate-in fade-in slide-in-from-bottom-2 duration-700 ease-out">
+          <div className="hidden lg:flex flex-1 items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-700 ease-out">
             {isAdmin ? (
-              <button onClick={() => setActivePage("admin")} className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400 transition cursor-pointer">
+              <button onClick={() => setActivePage("admin")} className={getNavStyle("admin", "red")}>
                 <Shield size={18} /> Admin Panel
               </button>
             ) : isProvider ? (
               <>
-                <button onClick={() => setActivePage("provider-dashboard")} className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 transition cursor-pointer">
+                <button onClick={() => setActivePage("provider-dashboard")} className={getNavStyle("provider-dashboard", "indigo")}>
                   <LayoutDashboard size={18} /> Dashboard
                 </button>
-                <button onClick={() => setActivePage("add-service")} className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-emerald-600 dark:text-gray-300 dark:hover:text-emerald-400 transition cursor-pointer">
+                <button onClick={() => setActivePage("add-service")} className={getNavStyle("add-service", "emerald")}>
                   <PlusCircle size={18} /> Add Service
                 </button>
-                <button onClick={() => setActivePage("my-reviews")} className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-amber-500 dark:text-gray-300 dark:hover:text-amber-400 transition cursor-pointer">
+                <button onClick={() => setActivePage("my-reviews")} className={getNavStyle("my-reviews", "amber")}>
                   <Star size={18} /> My Reviews
                 </button>
               </>
             ) : (
               <>
-                <button onClick={() => setActivePage("bookings")} className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 transition cursor-pointer">
+                <button onClick={() => setActivePage("bookings")} className={getNavStyle("bookings", "indigo")}>
                   <Calendar size={18} /> My Bookings
                 </button>
-                <button onClick={() => setActivePage("apply-provider")} className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-emerald-600 dark:text-gray-300 dark:hover:text-emerald-400 transition cursor-pointer">
+                <button onClick={() => setActivePage("apply-provider")} className={getNavStyle("apply-provider", "emerald")}>
                   <Briefcase size={18} /> Become a Provider
                 </button>
               </>
