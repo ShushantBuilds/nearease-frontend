@@ -50,6 +50,9 @@ export default function BecomeProvider({ user, onBack }) {
 
   return (
     <div className="max-w-2xl mx-auto mt-12 p-6 md:p-10 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+
+      <GoBackButton/>
+
       <div className="flex items-center gap-4 mb-8 border-b border-gray-100 dark:border-gray-700 pb-6">
         <div className="w-14 h-14 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center shrink-0">
           <Briefcase className="text-indigo-600 dark:text-indigo-400 w-7 h-7" />

@@ -52,6 +52,9 @@ export default function MyReviews() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+
+      <GoBackButton/>
+
       <div className="flex items-center gap-3 mb-8">
         <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-xl">
           <Star className="w-8 h-8 text-yellow-500 fill-current" />

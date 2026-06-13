@@ -70,6 +70,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const handleNavigateHome = () => setActivePage("home");
+    window.addEventListener("navigate-home", handleNavigateHome);
+    return () => window.removeEventListener("navigate-home", handleNavigateHome);
+  }, []);
+
+  useEffect(() => {
     const loadCategories = async () => {
       const data = await PublicAPI.getCategories();
       setMainCategories(Array.isArray(data) ? data : []);

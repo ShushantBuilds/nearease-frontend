@@ -142,6 +142,9 @@ export default function ProfileSettings({ user, setUser }) {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
+
+      <GoBackButton/>
+
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Account Settings</h1>
 
       <div className="space-y-6">

@@ -64,6 +64,8 @@ export default function ViewProfile({ user, setActivePage }) {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+      <GoBackButton/>
       
       {/* Header section with Edit Button */}
       <div className="flex justify-between items-center mb-8">
