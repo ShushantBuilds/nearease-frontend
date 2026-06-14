@@ -133,7 +133,7 @@ export default function CheckoutPage({ service, onBack, onComplete }) {
                  <span className="font-semibold text-gray-700 dark:text-gray-300">₹{servicePrice}</span>
                </div>
                <div className="flex justify-between items-center mb-3 text-sm text-gray-500 dark:text-gray-400">
-                 <span className="flex items-center gap-1"><ShieldCheck size={14} className="text-green-500"/> Secure Escrow Fee</span>
+                 <span className="flex items-center gap-1">Platform Supprt Fee</span>
                  <span className="font-semibold text-gray-700 dark:text-gray-300">₹{platformFee}</span>
                </div>
                <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
