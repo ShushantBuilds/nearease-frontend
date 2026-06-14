@@ -16,22 +16,32 @@ export default function ServicePage({ service, onBack, onProceedToCheckout, onLo
   const handleBookNow = () => {
     const userStr = localStorage.getItem("nearEaseUser");
     
-    // If no user session is found in localStorage
+    // 1. Check if they are logged in
     if (!userStr) {
       setAuthMessage("Please log in first to book this service. Redirecting...");
-      
-      // Wait 1.5 seconds for the user to read the message, then redirect
       setTimeout(() => {
         if (typeof onLoginRedirect === "function") {
           onLoginRedirect(); 
         } else {
-          window.location.href = "/login"; // Standard route fallback
+          window.location.href = "/login"; 
         }
       }, 1500);
       return;
     }
 
-    // If logged in, proceed to CheckoutPage normally
+    const currentUser = JSON.parse(userStr);
+
+    // 2. THE FIX: Check if the user is trying to book their own service
+    const isOwnService = 
+      currentUser.id === service?.provider?.user?.id || 
+      currentUser.email === service?.provider?.user?.email;
+
+    if (isOwnService) {
+      window.alert("You cannot book your own service!"); // Triggers GlobalAlert
+      return; 
+    }
+
+    // 3. If everything is fine, proceed to checkout
     onProceedToCheckout(service);
   };
 
@@ -66,6 +76,18 @@ export default function ServicePage({ service, onBack, onProceedToCheckout, onLo
           <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-2 leading-tight">
             {service.name || service.serviceType?.name || "Professional Service"}
           </h1>
+
+          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center bg-yellow-100 dark:bg-yellow-900/30 px-4 py-1.5 rounded-full w-fit">
+              <Star size={18} className="text-yellow-500 fill-current mr-2" />
+              <span className="font-black text-yellow-700 dark:text-yellow-500 text-lg">
+                 {service.provider?.averageRating > 0 ? service.provider.averageRating.toFixed(1) : "New"}
+              </span>
+            </div>
+            <span className="text-gray-500 dark:text-gray-400 font-medium">
+               {service.provider?.reviewCount || 0} Verified Reviews
+            </span>
+          </div>
           
           <div className="flex items-center justify-between mb-6">
             <p className="text-gray-500 dark:text-gray-400 flex items-center gap-2 font-medium text-lg">

@@ -16,20 +16,17 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (rating === 0) return alert("Please select a star rating!");
+    if (rating === 0) return window.alert("Please select a star rating!");
 
     setIsSubmitting(true);
     try {
-      // 1. Package the strict JSON payload
-      // We include both bookingId and bookingID to guarantee the Java DTO catches it
       const payload = {
         bookingId: booking.id,
         bookingID: booking.id, 
         rating: parseInt(rating),
-        comment: comment
+        comment: comment.trim()
       };
 
-      // 2. Call the API with EXACTLY ONE argument!
       await UserAPI.submitReview(payload);
 
       setIsSuccess(true);
@@ -38,7 +35,7 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
         handleClose();
       }, 2000); 
     } catch (err) {
-      alert("Failed to submit review. Server said: " + err.message);
+      window.alert("Failed to submit review: " + err.message);
       setIsSubmitting(false);
     }
   };
@@ -77,8 +74,7 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
-                      key={star}
-                      type="button"
+                      key={star} type="button"
                       onClick={() => setRating(star)}
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(0)}
@@ -87,9 +83,7 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
                       <Star 
                         size={36} 
                         className={`transition-colors duration-200 ${
-                          star <= (hoverRating || rating) 
-                            ? "fill-yellow-400 text-yellow-400" 
-                            : "fill-gray-100 text-gray-200 dark:fill-gray-700 dark:text-gray-600"
+                          star <= (hoverRating || rating) ? "fill-yellow-400 text-yellow-400" : "fill-gray-100 text-gray-200 dark:fill-gray-700 dark:text-gray-600"
                         }`} 
                       />
                     </button>
@@ -101,10 +95,17 @@ export default function ReviewModal({ isOpen, onClose, booking, onSuccess }) {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Write a Review</label>
+                <div className="flex justify-between items-end mb-2">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">Write a Review</label>
+                  {/* THE FIX: CHARACTER COUNTER */}
+                  <span className={`text-xs font-bold ${comment.length > 900 ? "text-red-500" : "text-gray-400"}`}>
+                    {comment.length} / 1000
+                  </span>
+                </div>
                 <textarea 
                   rows="4" 
-                  placeholder="What did you like or dislike? Would you recommend them?"
+                  maxLength={1000}
+                  placeholder="Please describe your experience in up to 1000 characters."
                   className="w-full p-4 border border-gray-200 dark:border-gray-600 rounded-2xl bg-gray-50 dark:bg-gray-700/50 focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}

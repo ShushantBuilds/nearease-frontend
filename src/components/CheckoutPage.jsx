@@ -34,14 +34,14 @@ export default function CheckoutPage({ service, onBack, onComplete }) {
         city: formData.city,
         state: formData.state,
         pinCode: parseInt(formData.pinCode),
-        // Send the final price including fee if your backend accepts it
         totalPrice: totalEstimatedCost 
       };
 
       const response = await BookingAPI.bookService(bookingPayload);
       setSuccessData({ bookingId: response.id || Math.floor(Math.random() * 10000) });
     } catch (err) {
-      setError("Failed to send service request. Please try again.");
+      // THE FIX: Use the Global Alert to display backend rejections!
+      window.alert(err.message || "Failed to send service request. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

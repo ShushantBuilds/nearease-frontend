@@ -103,7 +103,19 @@ export default function LoginView({ onViewChange, onLoginSuccess, onClose }) {
               {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
+          
+          {/* THE NEW FORGOT PASSWORD LINK */}
+          <div className="flex justify-end mt-2">
+            <button 
+              type="button" 
+              onClick={() => onViewChange("forgot-password")} 
+              className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-800 dark:hover:text-indigo-300 transition"
+            >
+              Forgot Password?
+            </button>
+          </div>
         </div>
+        
 
         <button onClick={handleLogin} disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold py-3 rounded-xl transition flex justify-center items-center gap-2 shadow-lg cursor-pointer">
           {isLoading ? <Loader2 size={20} className="animate-spin" /> : "Sign In"}

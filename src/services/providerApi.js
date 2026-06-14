@@ -83,6 +83,23 @@ export const ProviderAPI = {
     });
   },
 
+  editService: async (id, formData) => {
+    const user = JSON.parse(localStorage.getItem("nearEaseUser"));
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"}/api/provider/edit-service/${id}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${user?.token}`,
+      },
+      body: formData, // FormData automatically sets the correct multipart boundary!
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to edit service");
+    }
+    return await response.json();
+  },
+
   // Portfolio Management
   getMyPortfolio: async () => {
     return fetchWithAuth(`${PROVIDER_URL}/my-portfolio`, { 

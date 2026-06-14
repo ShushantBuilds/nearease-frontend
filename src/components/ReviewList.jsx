@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Star, User, Loader2, MessageSquare } from "lucide-react";
+import { Star, User, Loader2, MessageSquare, CornerDownRight } from "lucide-react"; // <-- Added CornerDownRight
 import { UserAPI } from "../services/userApi";
 
 export default function ReviewList({ providerId }) {
@@ -47,7 +47,6 @@ export default function ReviewList({ providerId }) {
       <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
         {reviews.map((review, idx) => {
           
-          // THE FIX: Catch the comment regardless of how the Java DTO capitalizes it
           const displayComment = review.comment || review.Comment || review.review || review.message;
 
           return (
@@ -75,7 +74,6 @@ export default function ReviewList({ providerId }) {
                 </div>
               </div>
               
-              {/* Conditional rendering based on the extracted comment */}
               {displayComment ? (
                  <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed italic">
                    "{displayComment}"
@@ -85,6 +83,17 @@ export default function ReviewList({ providerId }) {
                    No written comment provided.
                  </p>
               )}
+
+              {review.providerReply && (
+                <div className="mt-3 ml-4 bg-indigo-50/50 dark:bg-indigo-900/10 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/30 flex gap-2">
+                  <CornerDownRight className="text-indigo-400 shrink-0 mt-0.5" size={16} />
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-0.5 block">Provider Response</span>
+                    <p className="text-sm text-indigo-900 dark:text-indigo-200 italic">{review.providerReply}</p>
+                  </div>
+                </div>
+              )}
+
             </div>
           );
         })}
